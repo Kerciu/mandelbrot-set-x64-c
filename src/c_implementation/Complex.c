@@ -1,10 +1,5 @@
 #include "Complex.h"
 
-typedef struct complex {
-    double x; // Real portion
-    double y; // Imaginary portion
-} Complex;
-
 Complex* complexSquared(Complex* num) {
     Complex* newComplex = (Complex*)malloc(sizeof(Complex));
     if (newComplex == NULL) return NULL;
