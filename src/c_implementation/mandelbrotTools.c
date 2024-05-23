@@ -1,6 +1,8 @@
 #include "mandelbrotTools.h"
 
 int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
+    if (c == NULL) return -1;
+
     Complex* z = (Complex*)malloc(sizeof(Complex));
     if (z == NULL) return -1;
 
@@ -41,6 +43,8 @@ int* mandelbrotIterationTable(int* iterationTable, int size,
     double interpolX1, double interpolX2, double interpolY1,
     double interpolY2, int processPower, int setPoint)
     {
+    if (iterationTable == NULL || size <= 0) return NULL;
+
     int idx = 0;
 
     for (double x = 0; x < 1.0; x += 0.01) {
@@ -51,10 +55,16 @@ int* mandelbrotIterationTable(int* iterationTable, int size,
             double yAxis = linearInterpolation(y, interpolY1, interpolY2);
 
             Complex* num = (Complex*)malloc(sizeof(Complex));
+            if (num == NULL) {
+                free(iterationTable);
+                return NULL;
+            }
             num->x = xAxis;
             num->y = yAxis;
             int iter = isInMandelbrotSet(num, processPower, setPoint);
             free(num);
+
+            if (idx >= size - 1) return iterationTable;
             iterationTable[idx++] = iter;
         }
     }
