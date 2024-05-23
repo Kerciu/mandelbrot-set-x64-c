@@ -1,6 +1,6 @@
 #include "mandelbrotTools.h"
 
-int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
+static int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     if (c == NULL) return -1;
 
     Complex* z = (Complex*)malloc(sizeof(Complex));
@@ -11,7 +11,7 @@ int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
 
     // z = z ** 2 + c ; Iterate in order to check whether c is in mandelbrot set
     for (int i = 0; i < processPower; ++i) {
-        Complex* zPowered = complexSquared(z, 2);
+        Complex* zPowered = complexSquared(z);
         if (zPowered == NULL)
         {
             free(z);
@@ -39,16 +39,20 @@ int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     return 0;   // This is inside the set
 }
 
-int* mandelbrotIterationTable(int* iterationTable, int size,
+void mandelbrotIterationTable(int* iterationTable, int width, int height,
     double interpolX1, double interpolX2, double interpolY1,
     double interpolY2, int processPower, int setPoint)
     {
-    if (iterationTable == NULL || size <= 0) return NULL;
+    if (iterationTable == NULL || width <= 0 || height <= 0) {
+        return;
+    }
 
     int idx = 0;
 
-    for (double x = 0; x < 1.0; x += 0.01) {
-        for (double y = 0; y < 1.0; y += 0.01) {
+    for (double px = 0; px < 1.0; px += 0.01) {
+        for (double py = 0; py < 1.0; py += 0.01) {
+            double x = (double) px / (width - 1);
+            double y = (double) py / (height - 1);
 
             // Get interpolation
             double xAxis =  linearInterpolation(x, interpolX1, interpolX2);
@@ -57,16 +61,14 @@ int* mandelbrotIterationTable(int* iterationTable, int size,
             Complex* num = (Complex*)malloc(sizeof(Complex));
             if (num == NULL) {
                 free(iterationTable);
-                return NULL;
+                return;
             }
             num->x = xAxis;
             num->y = yAxis;
             int iter = isInMandelbrotSet(num, processPower, setPoint);
             free(num);
 
-            if (idx >= size - 1) return iterationTable;
             iterationTable[idx++] = iter;
         }
     }
-    return iterationTable;
 }
