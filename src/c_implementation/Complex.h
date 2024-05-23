@@ -1,7 +1,9 @@
 #ifndef COMPLEX_H
 #define COMPLEX_H
 
-#include "math.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <math.h>
 
 typedef struct complex {
     double x;
