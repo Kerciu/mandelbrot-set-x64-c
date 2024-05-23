@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -g -I../include
-LDFLAGS = -L../lib -lglfw
-SRC = ../src/main.c ../src/glad.c
+LDFLAGS = -L../lib -lglfw -lm
+SRC = ../src/main.c ../src/glad.c ../src/c_implementation/*.c
 
 all: main
 
