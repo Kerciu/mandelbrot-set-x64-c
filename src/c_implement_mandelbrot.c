@@ -1,17 +1,10 @@
 #include <stdlib.h>
+#include <math.h>
 
 typedef struct complex {
     double x; // Real portion
     double y; // Imaginary portion
 } Complex;
-
-double pow(double num, int p) {
-    double result = 1;
-    for (int i = 0; i < p; i++) {
-        result *= num;
-    }
-    return result;
-}
 
 Complex* complexPower(Complex* num, int p) {
     Complex* newComplex = (Complex*)malloc(sizeof(Complex));
@@ -34,8 +27,13 @@ Complex* complexAdd(Complex* a, Complex* b) {
     return newComplex;
 }
 
+double complexNorm(Complex* num) {
+    // Return square magnitude
 
-int isInMandelbrotSet(Complex* c, int processPower) {
+    return sqrt(pow(num->x, 2) + pow(num->y, 2));
+}
+
+int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     Complex* z = (double*)malloc(sizeof(Complex));
     if (z == NULL) return -1;
 
@@ -47,5 +45,7 @@ int isInMandelbrotSet(Complex* c, int processPower) {
         z = complexAdd(complexPower(z, 2), c);
 
         // Check if this point is still in the set
+        if (complexNorm(z) > setPoint) return i; // If we want to call mandelbrot set, we check how much iterations it took
     }
+    return 0;   // This is inside the set
 }
