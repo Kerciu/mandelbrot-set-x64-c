@@ -1,6 +1,11 @@
 #include "mandelbrotTools.h"
 
-static int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
+double linearInterpolation(double interpolationFactor, double a, double b) {
+    return (b - a) * interpolationFactor + a ;
+}
+
+
+int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     if (c == NULL) return -1;
 
     Complex* z = (Complex*)malloc(sizeof(Complex));
@@ -39,18 +44,18 @@ static int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     return 0;   // This is inside the set
 }
 
-void mandelbrotIterationTable(int* iterationTable, int width, int height,
+void createMandelbrot(unsigned char* pixelBuffer, int width, int height,
     double interpolX1, double interpolX2, double interpolY1,
     double interpolY2, int processPower, int setPoint)
     {
-    if (iterationTable == NULL || width <= 0 || height <= 0) {
+    if (pixelBuffer == NULL || width <= 0 || height <= 0) {
         return;
     }
 
     int idx = 0;
 
-    for (double px = 0; px < 1.0; px += 0.01) {
-        for (double py = 0; py < 1.0; py += 0.01) {
+    for (int px = 0; px < width; ++px) {
+        for (int py = 0; py < height; ++py) {
             double x = (double) px / (width - 1);
             double y = (double) py / (height - 1);
 
@@ -58,17 +63,16 @@ void mandelbrotIterationTable(int* iterationTable, int width, int height,
             double xAxis =  linearInterpolation(x, interpolX1, interpolX2);
             double yAxis = linearInterpolation(y, interpolY1, interpolY2);
 
-            Complex* num = (Complex*)malloc(sizeof(Complex));
-            if (num == NULL) {
-                free(iterationTable);
-                return;
-            }
-            num->x = xAxis;
-            num->y = yAxis;
-            int iter = isInMandelbrotSet(num, processPower, setPoint);
-            free(num);
+            Complex num = { .x = xAxis, .y = yAxis};
+            int iter = isInMandelbrotSet(&num, processPower, setPoint);
 
-            iterationTable[idx++] = iter;
+            // Simplified
+            unsigned char color = (iter == 0) ? 0 : 255; // TODO unsimplify this
+
+            pixelBuffer[idx++] = color; // R
+            pixelBuffer[idx++] = color; // G
+            pixelBuffer[idx++] = color; // B
+
         }
     }
 }
