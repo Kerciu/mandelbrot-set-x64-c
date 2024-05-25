@@ -45,34 +45,47 @@ int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
 }
 
 void createMandelbrot(unsigned char* pixelBuffer, int width, int height,
-    double interpolX1, double interpolX2, double interpolY1,
-    double interpolY2, int processPower, int setPoint)
+                    int processPower, int setPoint)
     {
     if (pixelBuffer == NULL || width <= 0 || height <= 0) {
         return;
     }
 
+    int bufferSize = width * height * 4;
     int idx = 0;
 
-    for (int px = 0; px < width; ++px) {
-        for (int py = 0; py < height; ++py) {
-            double x = (double) px / (width - 1);
-            double y = (double) py / (height - 1);
+    for (double y = 0; y < height; ++y) {
+        for (double x = 0; x < width; ++x) {
+            if (idx >= bufferSize) return;
+
+            double xReal = (double)x / width * 4.0 - 2.0;
+            double yReal = (double)y / height * 4.0 - 2.0;
 
             // Get interpolation
-            double xAxis =  linearInterpolation(x, interpolX1, interpolX2);
-            double yAxis = linearInterpolation(y, interpolY1, interpolY2);
+            // double xAxis =  linearInterpolation(x, -2.0, 2.0);
+            // double yAxis = linearInterpolation(y, -2.0, 2.0);
 
-            Complex num = { .x = xAxis, .y = yAxis};
-            int iter = isInMandelbrotSet(&num, processPower, setPoint);
+            Complex num = { .x = xReal, .y = yReal};
+            int iters = isInMandelbrotSet(&num, processPower, setPoint);
 
             // Simplified
-            unsigned char color = (iter == 0) ? 0 : 255; // TODO unsimplify this
 
-            pixelBuffer[idx++] = color; // R
-            pixelBuffer[idx++] = color; // G
-            pixelBuffer[idx++] = color; // B
+            if (iters == 0) {
+                // renderer draw color (renderer , r, g, b, opacity)
+                pixelBuffer[idx++] = 0; // R
+                pixelBuffer[idx++] = 0; // G
+                pixelBuffer[idx++] = 0; // B
+                pixelBuffer[idx++] = 255; // Opacity
+                // renderer draw point F (renderer, x * 1000, y * 1000)
 
+            }
+            else {
+                //set renderer color (renderer, 255 - iters,255 - iters,255 - iters, 255);
+                pixelBuffer[idx++] = (iters * 10) % 255; // R
+                pixelBuffer[idx++] = (iters * 15) % 255; // G
+                pixelBuffer[idx++] = (iters * 20) % 255; // B
+                pixelBuffer[idx++] = 255; // A
+            }
         }
     }
 }
