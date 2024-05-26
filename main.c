@@ -71,8 +71,10 @@ int main( int argc, char *argv[] )
     double centerReal = -0.5;
     double centerImag = 0.0;
     double zoom = 1.0;
+    int processPower = 100;
+    int setPoint = 4;
 
-    createMandelbrot(buf, WIDTH, HEIGHT, 25, 10, centerReal, centerImag, zoom);
+    createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
     saveBMP("mandelbrot.bmp", WIDTH, HEIGHT, buf);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
@@ -82,10 +84,40 @@ int main( int argc, char *argv[] )
     int quit = 0;
     SDL_Event e;
     while (!quit) {
-        while (SDL_PollEvent(&e) != 0) {
+        while (SDL_PollEvent(&e) != 0)
+        {
             if (e.type == SDL_QUIT) {
                 quit = 1;
             }
+            else if (e.type == SDL_MOUSEWHEEL)
+            {
+                double mouseX = e.wheel.x;
+                double mouseY = e.wheel.y;
+                SDL_GetMouseState(&mouseX, &mouseY);
+                double mouseRe = (mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom) + centerReal;
+                double mouseIm = (mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom) + centerImag;
+
+                if (e.wheel.y > 0) {
+                    zoom *= 1.1;
+                }
+                else if (e.wheel.y < 0) {
+                    zoom /= 1.1;
+                }
+                centerReal = mouseRe + (centerReal - mouseRe) / 1.1;
+                centerImag = mouseIm + (centerImag - mouseIm) / 1.1;
+            }
+            else if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
+                int mouseX = e.button.x;
+                int mouseY = e.button.y;
+
+                centerReal += (mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom);
+                centerImag += (mouseX - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom);
+            }
+            createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+            SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+            SDL_DestroyTexture(texture);
+            texture = SDL_CreateTextureFromSurface(renderer, surface);
+            SDL_FreeSurface(surface);
         }
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
