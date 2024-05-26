@@ -23,8 +23,23 @@ mandelbrot:
     push r12
 
     ; body
+    test rdi, rdi   ; if (pixelBuffer == NULL)
+    jz   end
+    cmp rsi, 0      ; if (width <= 0)
+    jle  end
+    cmp rdx, 0      ; if (height <= 0)
+    jle  end
+
+    lea r9, [4 * rsi]
+    lea r9, [r9 * edx]  ; r9 = bufferSize = 4 * width * height
+    mov r10, 0          ; r10 = idx = 0
 
     ; epilogue
+
+for_y_loop:
+
+for_x_loop:
+
 end:
     pop r12
     pop rbx
