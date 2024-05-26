@@ -121,13 +121,14 @@ int main( int argc, char *argv[] )
                 needRedraw = 1;
             }
         }
-            if (needRedraw) {
+        if (needRedraw)
+        {
             createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
             SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
             SDL_DestroyTexture(texture);
             texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
-            }
+        }
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
