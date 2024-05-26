@@ -68,8 +68,11 @@ int main( int argc, char *argv[] )
         return -1;
     }
 
-    createMandelbrot(buf, WIDTH, HEIGHT,
-                      25, 10);
+    double centerReal = -0.5;
+    double centerImag = 0.0;
+    double zoom = 1.0;
+
+    createMandelbrot(buf, WIDTH, HEIGHT, 25, 10, centerReal, centerImag, zoom);
     saveBMP("mandelbrot.bmp", WIDTH, HEIGHT, buf);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);

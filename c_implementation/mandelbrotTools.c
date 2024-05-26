@@ -45,7 +45,7 @@ int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
 }
 
 void createMandelbrot(unsigned char* pixelBuffer, int width, int height,
-                    int processPower, int setPoint)
+    int processPower, int setPoint, int centerReal, int centerImag, int zoom)
     {
     if (pixelBuffer == NULL || width <= 0 || height <= 0) {
         return;
@@ -58,8 +58,8 @@ void createMandelbrot(unsigned char* pixelBuffer, int width, int height,
         for (double x = 0; x < width; ++x) {
             if (idx >= bufferSize) return;
 
-            double xReal = (double)x / width * 4.0 - 2.0;
-            double yReal = (double)y / height * 4.0 - 2.0;
+            double xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal;
+            double yReal = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag;
 
             // Get interpolation
             // double xAxis =  linearInterpolation(x, -2.0, 2.0);
@@ -76,11 +76,9 @@ void createMandelbrot(unsigned char* pixelBuffer, int width, int height,
                 pixelBuffer[idx++] = 0; // G
                 pixelBuffer[idx++] = 0; // B
                 pixelBuffer[idx++] = 255; // Opacity
-                // renderer draw point F (renderer, x * 1000, y * 1000)
 
             }
             else {
-                //set renderer color (renderer, 255 - iters,255 - iters,255 - iters, 255);
                 pixelBuffer[idx++] = (iters * 10) % 255; // R
                 pixelBuffer[idx++] = (iters * 15) % 255; // G
                 pixelBuffer[idx++] = (iters * 20) % 255; // B
