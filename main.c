@@ -73,8 +73,10 @@ int main( int argc, char *argv[] )
     double zoom = 1.0;
     int processPower = 100;
     int setPoint = 4;
+    double cReal = 0.0;
+    double cImag = 0.0;
 
-    createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+    mandelbrot(buf, WIDTH, HEIGHT, cReal, cImag, processPower, setPoint, centerReal, centerImag, zoom);
     saveBMP("mandelbrot.bmp", WIDTH, HEIGHT, buf);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
@@ -117,7 +119,7 @@ int main( int argc, char *argv[] )
                 int mouseY = e.button.y;
 
                 centerReal += (mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom);
-                centerImag += (mouseX - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom);
+                centerImag += (mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom);
                 needRedraw = 1;
             }
         }
