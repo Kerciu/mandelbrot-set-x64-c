@@ -110,7 +110,45 @@ add_complex:
     ;     z = zAdded;
 
     ;     // Check if this point is still in the set
+complex_norm:
+    ; int sqroot(int n) {
+    ;     int x = n;
+    ;     for (int i = 0; i < (n/2); i++)
+    ;          x = (x + n / x) / 2;
+
+    ;     return x;
+    ; }
+
+    movsd xmm9, xmm7
+    mulsd xmm9, xmm9
+    movsd xmm10, xmm8
+    mulsd xmm10, xmm10
+
+    ; sqrt(pow(num->x, 2) + pow(num->y, 2));
+    addsd xmm9, xmm10
+    ; now I have in xmm9 register value of x^2 + y^2
+
+sqroot:
+    ; n = xmm9
+    movsd xmm1, xmm9     ; x = n
+    ; movsd xmm11, xmm9       ; save n as temporary
+
+sqroot_loop:
+    movsd xmm0, xmm1   ; x = xmm0
+    divsd xmm0, xmm9          ; x / n
+    addsd xmm1, xmm0   ; x + x / n
+    mov   rax, 2
+    movq  xmm3, rax
+    divsd xmm1, xmm3   ; x = (x + x / n) / 2
+    subsd xmm2, xmm1
+    andpd xmm2, xmm2
+    movmskpd rax, xmm2
+    test rax, eax
+    jnz  sqroot_loop
+
     ;     if (complexNorm(z) > setPoint)
+
+
 
     ; this will be a hell to implement
 
