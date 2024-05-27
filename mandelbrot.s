@@ -48,8 +48,19 @@ for_x_loop:
     cvtsi2sd xmm6, r11        ; xmm6 = x = 0
 
 loop:
-    ; comisd xmm5, WIDTH    TODO MAKE THOSE LOOP CONDITIONS
-    ; comisd xmm6, HEIGHT
+    cvtsi2sd xmm8, rsi
+    cvtsi2sd xmm9, rdx
+    ; comisd x, WIDTH    TODO MAKE THOSE LOOP CONDITIONS
+    comisd xmm5, xmm8
+    jge   end_x_loop
+    ; comisd y, HEIGHT
+    comisd xmm6, xmm9
+    jge  end
+
+    ; increment x
+    mov rax, 1
+    cvtsi2sd xmm10, rax
+    addsd xmm5, xmm10
 
     ; double xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal;
     movsd xmm7, xmm6
@@ -87,7 +98,7 @@ loop:
     ; for (int i = 0; i < processPower; ++i) {
 is_in_mandelbrot:
     cmp r12, rcx
-    jge return_iters
+    jge return_zero_iter
     inc r12
     ;     Complex zPowered = complexSquared(z);
 power_complex:
@@ -154,7 +165,7 @@ sqroot_loop:
 
     cvtsi2sd xmm2, r8   ; setPoint
     comisd  xmm1, xmm2
-    jg      return_iters
+    jg      draw_pixels
 
     ; this will be a hell to implement
 
@@ -162,11 +173,66 @@ sqroot_loop:
     ;         return i;
     ;     } // If we want to call mandelbrot set, we check how much iterations it took
     ; }
-
-    jmp loop
+    inc r12
+    jmp is_in_mandelbrot
     ; return 0;   // This is inside the set
-return_iters:
 
+return_zero_iter:
+    xor r12, 12
+
+draw_pixels:
+    ; if (iters == 0) {
+    ;     // renderer draw color (renderer , r, g, b, opacity)
+    ;     pixelBuffer[idx++] = 0; // R
+    ;     pixelBuffer[idx++] = 0; // G
+    ;     pixelBuffer[idx++] = 0; // B
+    ;     pixelBuffer[idx++] = 255; // Opacity
+
+    ; }
+    ; else {
+    ;     pixelBuffer[idx++] = (iters * 10) % 255; // R
+    ;     pixelBuffer[idx++] = (iters * 15) % 255; // G
+    ;     pixelBuffer[idx++] = (iters * 20) % 255; // B
+    ;     pixelBuffer[idx++] = 255; // A
+    ; }
+    test r12, r12
+    jz   draw_black
+
+    ; pixelBuffer = rdi
+draw_rgb:
+    mov rax, r12
+    imul rax, rax, 10
+    mov rcx, 255
+    xor rdx, rdx
+    div rcx     ; there is modulo operation result in rdx register
+    mov byte [rdi + r10], dl
+    inc r10
+    mov byte [rdi + r10], dl       ;  BUT IT IS IN dl 8-bit register...
+    inc r10
+    mov byte [rdi + r10], dl
+    inc r10
+    mov byte [rdi + r10], 255
+    inc r10
+    jmp loop
+
+draw_black:
+    mov byte [rdi + r10], 0
+    inc  r10
+    mov byte [rdi + r10], 0
+    inc  r10
+    mov byte [rdi + r10], 0
+    inc  r10
+    mov byte [rdi + r10], 255
+    inc  r10
+    jmp loop
+
+end_x_loop:
+    xor r11, r11
+    cvtsi2sd xmm6, r11        ; xmm6 = x = 0
+    mov rax, 1
+    cvtsi2sd xmm10, rax
+    addsd xmm5, xmm10
+    jmp for_x_loop
 
 end:
     pop r12
