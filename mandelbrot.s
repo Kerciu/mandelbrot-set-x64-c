@@ -103,11 +103,17 @@ power_complex:
 
     ;     Complex zAdded = complexAdd(zPowered, c);
 add_complex:
+    ; z + c = (Zx + Cx) + j(Zy + Cy)
+    addsd xmm7, xmm0    ; xReal + cReal
+    addsd xmm8, xmm1    ; yReal + cImag
 
     ;     z = zAdded;
 
     ;     // Check if this point is still in the set
     ;     if (complexNorm(z) > setPoint)
+
+    ; this will be a hell to implement
+
     ;     {
     ;         return i;
     ;     } // If we want to call mandelbrot set, we check how much iterations it took
