@@ -47,6 +47,10 @@ for_x_loop:
     xor r11, r11
     cvtsi2sd xmm6, r11        ; xmm6 = x = 0
 
+loop:
+    ; comisd xmm5, WIDTH    TODO MAKE THOSE LOOP CONDITIONS
+    ; comisd xmm6, HEIGHT
+
     ; double xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal;
     movsd xmm7, xmm6
     mov   rax, rsi
@@ -143,12 +147,14 @@ sqroot_loop:
     subsd xmm2, xmm1
     andpd xmm2, xmm2
     movmskpd rax, xmm2
-    test rax, eax
+    test rax, rax
     jnz  sqroot_loop
 
     ;     if (complexNorm(z) > setPoint)
 
-
+    cvtsi2sd xmm2, r8   ; setPoint
+    comisd  xmm1, xmm2
+    jg      return_iters
 
     ; this will be a hell to implement
 
@@ -156,6 +162,8 @@ sqroot_loop:
     ;         return i;
     ;     } // If we want to call mandelbrot set, we check how much iterations it took
     ; }
+
+    jmp loop
     ; return 0;   // This is inside the set
 return_iters:
 
