@@ -78,7 +78,43 @@ for_x_loop:
     addsd   xmm8, xmm3  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
 
     ; TODO
-    ; implement isInSet(xReal, yReal, processPower, setPoint) func
+    ; implement isInSet(xReal=xmm7, yReal=xmm8, processPower=rcx, setPoint=r8) func
+    xor r12, r12        ; int i = r12 = 0
+    ; for (int i = 0; i < processPower; ++i) {
+is_in_mandelbrot:
+    cmp r12, rcx
+    jge return_iters
+    inc r12
+    ;     Complex zPowered = complexSquared(z);
+power_complex:
+    ; x^2 + 2xyj - y^2
+    ; xmm7 = xReal^2 - yReal^2
+    ; xmm8 = 2xRealyReal
+    movsd xmm9, xmm7
+    movsd xmm10, xmm8
+    mulsd xmm9, xmm9 ; x^2
+    mulsd xmm10, xmm10 ; y^2
+    subsd xmm9, xmm10   ; x^2 - y^2
+    movsd xmm10, xmm8
+    mulsd xmm10, xmm7   ; xy
+    addsd xmm10, xmm10  ; 2xy
+    movsd xmm7, xmm9
+    movsd xmm8, xmm10
+
+    ;     Complex zAdded = complexAdd(zPowered, c);
+add_complex:
+
+    ;     z = zAdded;
+
+    ;     // Check if this point is still in the set
+    ;     if (complexNorm(z) > setPoint)
+    ;     {
+    ;         return i;
+    ;     } // If we want to call mandelbrot set, we check how much iterations it took
+    ; }
+    ; return 0;   // This is inside the set
+return_iters:
+
 
 end:
     pop r12
