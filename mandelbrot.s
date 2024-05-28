@@ -30,21 +30,21 @@ mandelbrot:
     jle  end
 
     ; Calculate buffer size: r9 = bufferSize = 4 * width * height
-    imul r9, rsi, 4
-    mov rax, r9
-    mul rdx
+    mov rax, rsi
+    imul rax, rdx
+    sar rax, 2
     mov r9, rax
 
     ; Initialize idx = 0
     mov r10, 0          ; r10 = idx = 0
 
     ; Initialize y = 0
-    cvtsi2sd xmm3, r10         ; xmm3 = y = 0
+    pxor xmm3, xmm3         ; xmm3 = y = 0
 
 for_y_loop:
     ; Initialize x = 0
     xor r11, r11
-    cvtsi2sd xmm4, r11        ; xmm4 = x = 0
+    pxor xmm4, xmm4        ; xmm4 = x = 0
 
 for_x_loop:
     ; Check if idx >= bufferSize
@@ -64,10 +64,10 @@ for_x_loop:
     ; Calculate cReal
     movsd xmm5, xmm4
     mov   rax, rsi
-    shr    rax, 1
+    sar    rax, 1
     cvtsi2sd  xmm6, rax ; itod(width / 2.0)
     subsd   xmm5, xmm6  ; cReal = (x - width / 2.0)
-    shl     rax,  1
+    sal     rax,  1
     cvtsi2sd    xmm6, rax
     addsd    xmm5, xmm5     ; cReal = (x - width / 2.0) * 2.0
     addsd   xmm5, xmm5      ; cReal = (x - width / 2.0) * 4.0
@@ -78,9 +78,9 @@ for_x_loop:
     ; Calculate cImag
     movsd xmm6, xmm3
     mov     rax, rdx
-    shr     rax, 1
+    sar     rax, 1
     cvtsi2sd xmm7, rax  ; itod(height / 2)
-    shl     rax, 1
+    sal     rax, 1
     cvtsi2sd xmm7, rax
     subsd   xmm6, xmm7  ; cImag = (y - height / 2.0)
     addsd   xmm6, xmm6  ; cImag = (y - height / 2.0) * 2.0
@@ -95,8 +95,8 @@ for_x_loop:
     xor r12, r12        ; int i = r12 = 0
 
     ; Initialize zReal and zImag
-    cvtsi2sd xmm9, r12      ; zReal
-    cvtsi2sd xmm10, r12     ; zImag
+    pxor xmm9, xmm9      ; zReal
+    pxor xmm10, xmm10     ; zImag
 is_in_mandelbrot:
 
     ; Check if Iters >= processPower
@@ -105,33 +105,30 @@ is_in_mandelbrot:
     inc r12
 
     ; x^2 + 2xyj - y^2
-    movsd xmm7, xmm9    ; xmm7 = cReal
-    movsd xmm8, xmm10   ; xmm8 = cImag
+    movsd xmm7, xmm9    ; xmm7 = zReal
+    movsd xmm8, xmm10   ; xmm8 = zImag
 
-    mulsd xmm7, xmm7    ; x^2
-    mulsd xmm8, xmm8    ; y^2
-    subsd xmm7, xmm8    ; xmm7 = x^2 - y^2
+    mulsd xmm7, xmm7    ; zReal^2
+    mulsd xmm8, xmm8    ; zImag^2
+    subsd xmm7, xmm8    ; xmm7 = zReal^2 - zImag^2
 
-    movsd xmm8, xmm10   ; xmm8 = cImag
-    mulsd xmm8, xmm9    ; xy
-    addsd xmm8, xmm8    ; 2xy
+    movsd xmm8, xmm10   ; xmm8 = zImag
+    mulsd xmm8, xmm9    ; zReal * zImag
+    addsd xmm8, xmm8    ; 2 * zReal * zImag
 
-    ; cReal = cReal^2 - cImag^2
-    movsd xmm9, xmm7
-    ; cImag = 2 * cReal * cImag
-    movsd xmm10, xmm8
+    ; zReal = complexSquaredReal + cReal
+    addsd xmm7, xmm5    ; xmm7 = zReal = (zReal^2 - zImag^2) + cReal
 
-    ; Complex zAdded = complexAdd(zPowered, c);
+    ; zImag = complexSquaredImag + cImag
+    addsd xmm8, xmm6    ; xmm8 = zImag = (2 * zReal * zImag) + cImag
 
-    ; double complexAddedReal = zReal + cReal;
-    ; double complexAddedImag = zImag + cImag;
-    addsd xmm9, xmm5
-    addsd xmm10, xmm6
+    movsd xmm9, xmm7    ; update zReal
+    movsd xmm10, xmm8   ; update zImag
 
     ; Calculate |z|
-    movapd xmm7, xmm9
+    movsd xmm7, xmm9
     mulsd xmm7, xmm9     ; x^2
-    movapd xmm8, xmm10
+    movsd xmm8, xmm10
     mulsd xmm8, xmm10    ; y^2
     addsd xmm7, xmm8     ; x^2 + y^2
 
@@ -157,18 +154,18 @@ draw_pixels:
     ; Calculate color based on iters
     mov rax, r12
     imul rax, 10
-    movzx rbx, al    ; R = (iters * 10) % 255
-    mov byte [rdi + r10], bl
+    and rax, 0xFF    ; R = (iters * 10) % 255
+    mov byte [rdi + r10], al
 
     mov rax, r12
     imul rax, 15
-    movzx rbx, al    ; G = (iters * 15) % 255
-    mov byte [rdi + r10 + 1], bl
+    and rax, 0xFF    ; G = (iters * 15) % 255
+    mov byte [rdi + r10 + 1], al
 
     mov rax, r12
     imul rax, 20
-    movzx rbx, al    ; B = (iters * 20) % 255
-    mov byte [rdi + r10 + 2], bl
+    and rax, 0xFF    ; B = (iters * 20) % 255
+    mov byte [rdi + r10 + 2], al
 
     mov byte [rdi + r10 + 3], 255 ; A
 
@@ -184,13 +181,18 @@ next_pixel:
     add r10, 4       ; Move to next pixel
     inc r11          ; Increment x
 
-    cmp r11, rsi     ; Check if x counter > width
-    jge for_x_loop
+    ; Check if idx >= bufferSize
+    cmp r10, r9
+    jge end
+
+    ; Check if x counter >= width
+    cmp r11, rsi
+    jl  for_x_loop
 
 end_x_loop:
     ; Clear x counter ( r11 ) and increment y counter ( r10 - xmm3 )
     xor r11, r11
-    cvtsi2sd xmm4, r11        ; xmm4 = x = 0
+    pxor xmm4, xmm4        ; xmm4 = x = 0
     mov rax, 1
     cvtsi2sd xmm8, rax
     addsd xmm3, xmm8         ; ++y
