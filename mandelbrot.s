@@ -23,8 +23,7 @@ mandelbrot:
     push r12
 
     ; body
-    test rdi, rdi   ; if (pixelBuffer == NULL)
-    jz   end
+
     cmp rsi, 0      ; if (width <= 0)
     jle  end
     cmp rdx, 0      ; if (height <= 0)
@@ -47,7 +46,6 @@ for_x_loop:
     xor r11, r11
     cvtsi2sd xmm6, r11        ; xmm6 = x = 0
 
-loop:
     cvtsi2sd xmm8, rsi
     cvtsi2sd xmm9, rdx
     ; comisd x, WIDTH    TODO MAKE THOSE LOOP CONDITIONS
@@ -100,85 +98,53 @@ is_in_mandelbrot:
     cmp r12, rcx
     jge return_zero_iter
     inc r12
-    ;     Complex zPowered = complexSquared(z);
-power_complex:
     ; x^2 + 2xyj - y^2
     ; xmm7 = xReal^2 - yReal^2
     ; xmm8 = 2xRealyReal
     movsd xmm9, xmm7
     movsd xmm10, xmm8
+
     mulsd xmm9, xmm9 ; x^2
     mulsd xmm10, xmm10 ; y^2
-    subsd xmm9, xmm10   ; x^2 - y^2
-    movsd xmm10, xmm8
+
+    subsd xmm9, xmm10   ; xmm9 = x^2 - y^2
+    movsd xmm10, xmm8   ; xmm10 = y
     mulsd xmm10, xmm7   ; xy
     addsd xmm10, xmm10  ; 2xy
+
+    ; xReal = xReal^2 - yReal^2
     movsd xmm7, xmm9
+    ; yReal = 2 * xReal * yReal
     movsd xmm8, xmm10
 
     ;     Complex zAdded = complexAdd(zPowered, c);
-add_complex:
+
     ; z + c = (Zx + Cx) + j(Zy + Cy)
     addsd xmm7, xmm0    ; xReal + cReal
     addsd xmm8, xmm1    ; yReal + cImag
 
-    ;     z = zAdded;
+    ; Calculate |z|
 
-    ;     // Check if this point is still in the set
-complex_norm:
-    ; int sqroot(int n) {
-    ;     int x = n;
-    ;     for (int i = 0; i < (n/2); i++)
-    ;          x = (x + n / x) / 2;
+    movapd xmm9, xmm8
+    mulsd xmm9, xmm8    ; x^2
+    movapd xmm10, xmm7
+    mulsd xmm10, xmm7  ; y^2
+    addsd xmm9, xmm10  ; x^2 + y^2
 
-    ;     return x;
-    ; }
-
-    movsd xmm9, xmm7
-    mulsd xmm9, xmm9
-    movsd xmm10, xmm8
-    mulsd xmm10, xmm10
-
-    ; sqrt(pow(num->x, 2) + pow(num->y, 2));
-    addsd xmm9, xmm10
-    ; now I have in xmm9 register value of x^2 + y^2
-
-sqroot:
-    ; n = xmm9
-    movsd xmm1, xmm9     ; x = n
-    ; movsd xmm11, xmm9       ; save n as temporary
-
-sqroot_loop:
-    movsd xmm0, xmm1   ; x = xmm0
-    divsd xmm0, xmm9          ; x / n
-    addsd xmm1, xmm0   ; x + x / n
-    mov   rax, 2
-    movq  xmm3, rax
-    divsd xmm1, xmm3   ; x = (x + x / n) / 2
-    subsd xmm2, xmm1
-    andpd xmm2, xmm2
-    movmskpd rax, xmm2
-    test rax, rax
-    jnz  sqroot_loop
+; Calculate sqrt(|z|)
+    sqrtsd xmm9, xmm9
 
     ;     if (complexNorm(z) > setPoint)
 
-    cvtsi2sd xmm2, r8   ; setPoint
-    comisd  xmm1, xmm2
+    cvtsi2sd xmm10, r8   ; setPoint
+    comisd  xmm9, xmm10
     jg      draw_pixels
 
-    ; this will be a hell to implement
-
-    ;     {
-    ;         return i;
-    ;     } // If we want to call mandelbrot set, we check how much iterations it took
-    ; }
-    inc r12
     jmp is_in_mandelbrot
     ; return 0;   // This is inside the set
 
 return_zero_iter:
-    xor r12, 12
+    xor r12, r12
 
 draw_pixels:
     ; if (iters == 0) {
@@ -199,32 +165,34 @@ draw_pixels:
     jz   draw_black
 
     ; pixelBuffer = rdi
-draw_rgb:
-    mov rax, r12
+draw_black:
+    test r12, r12
+    jnz draw_rgb
+
+    mov byte [rdi + r10], 0   ; R
+    mov byte [rdi + r10 + 1], 0 ; G
+    mov byte [rdi + r10 + 2], 0 ; B
+    mov byte [rdi + r10 + 3], 255 ; A
+
+    jmp next_pixel
+
+
+mov rax, r12
     imul rax, rax, 10
     mov rcx, 255
     xor rdx, rdx
     div rcx     ; there is modulo operation result in rdx register
-    mov byte [rdi + r10], dl
-    inc r10
-    mov byte [rdi + r10], dl       ;  BUT IT IS IN dl 8-bit register...
-    inc r10
-    mov byte [rdi + r10], dl
-    inc r10
-    mov byte [rdi + r10], 255
-    inc r10
-    jmp loop
 
-draw_black:
-    mov byte [rdi + r10], 0
-    inc  r10
-    mov byte [rdi + r10], 0
-    inc  r10
-    mov byte [rdi + r10], 0
-    inc  r10
-    mov byte [rdi + r10], 255
-    inc  r10
-    jmp loop
+    mov byte [rdi + r10], dl   ; R
+    mov byte [rdi + r10 + 1], dl ; G
+    mov byte [rdi + r10 + 2], dl ; B
+    mov byte [rdi + r10 + 3], 255 ; A
+
+next_pixel:
+    add r10, 4       ; Move to next pixel
+    inc r11          ; Increment x
+
+    jmp for_x_loop
 
 end_x_loop:
     xor r11, r11
