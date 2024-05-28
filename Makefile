@@ -1,21 +1,25 @@
+EXEFILE = program
+OBJECTS = main.o mandelbrot.o
+CCFMT = -m64
+NASMFMT = -f elf64
+NASMOPT = -w+all
+
 CC = gcc
-CFLAGS=-m64 -Wextra -Wall
-C_SRC = main.c c_implementation/Complex.c c_implementation/mandelbrotTools.c
-NASM_PATH = /mnt/c/Users/Kacper/AppData/Local/NASM/nasm.exe
-OBJ_NAME = mandelbrot
-SDL_PATH = C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c-sdl/src/include/SDL2
-LIB_PATH = C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c-sdl/src/lib
+CFLAGS = -c -g -Wall -Wextra
+LDFLAGS = -lmingw32 -lSDL2main -lSDL2
 
-all: $(OBJ_NAME)
+NASM_PATH = C:/Users/Kacper/AppData/Local/NASM/nasm.exe
+SDL_PATH = C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c/src/include/SDL2
+LIB_PATH = C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c/src/lib
 
-$(OBJ_NAME): $(C_SRC:.c=.o) mandelbrot.o
-	$(CC) $(C_SRC:.c=.o) -g mandelbrot.o -I $(SDL_PATH) -L $(LIB_PATH) -Wl,-subsystem,windows -lmingw32 -lSDL2main -lSDL2 -o $(OBJ_NAME)
+%.o: %.c
+	$(CC) $(CCFMT) $(CFLAGS) -o $@ $<
 
-main.o: main.c mandelbrot.h
-	$(CC) $(CFLAGS) -c main.c
+%.o: %.s
+	$(NASM_PATH) $(NASMFMT) $(NASMOPT) -o $@ $<
 
-mandelbrot.o: mandelbrot.s
-	$(NASM_PATH) -g -f elf64 mandelbrot.s -o mandelbrot.o
+$(EXEFILE): $(OBJECTS)
+	$(CC) $(CCFMT) -o $@ $^ $(LDFLAGS) -L $(LIB_PATH) -I $(SDL_PATH)
 
 clean:
-	rm -f *.o c_implementation/*.o $(OBJ_NAME)
+	del *.o $(EXEFILE).exe
