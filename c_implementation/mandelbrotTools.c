@@ -83,3 +83,62 @@ void createMandelbrot(uint8_t* pixelBuffer, int width, int height,
         }
     }
 }
+
+void createMandelbrotAssemblified(uint8_t* pixelBuffer, int width, int height,
+                      int processPower, int setPoint, double centerReal,
+                      double centerImag, double zoom) {
+    if (pixelBuffer == NULL || width <= 0 || height <= 0) {
+        return;
+    }
+
+    int bufferSize = width * height * 4;
+    int idx = 0;
+
+    for (double y = 0; y < height; ++y) {
+        for (double x = 0; x < width; ++x) {
+            if (idx >= bufferSize) return;
+
+            double cReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal;
+            double cImag = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag;
+
+            int iters = 0;
+
+            double zReal = 0.0;
+            double zImag = 0.0;
+
+            // z = z ** 2 + c ; Iterate in order to check whether c is in mandelbrot set
+            for (int i = 0; i < processPower; ++i) {
+
+                double complexSquaredReal = zReal * zReal - zImag * zImag;
+                double complexSquaredImag = 2 * zReal * zImag;
+
+                double complexAddedReal = zReal + cReal;
+                double complexAddedImag = zImag + cImag;
+
+                zReal = complexAddedReal;
+                zImag = complexAddedImag;
+
+                // Check if this point is still in the set
+                double complexNorm = sqrt(zReal * zReal + zImag * zReal);
+                if (complexNorm > setPoint) {
+                    iters =  i;
+                    break;
+                }
+            }
+
+            if (iters == 0) {
+                pixelBuffer[idx++] = 0; // R
+                pixelBuffer[idx++] = 0; // G
+                pixelBuffer[idx++] = 0; // B
+                pixelBuffer[idx++] = 255; // A
+
+            }
+            else {
+                pixelBuffer[idx++] = (iters * 10) % 255; // R
+                pixelBuffer[idx++] = (iters * 15) % 255; // G
+                pixelBuffer[idx++] = (iters * 20) % 255; // B
+                pixelBuffer[idx++] = 255; // A
+            }
+        }
+    }
+}
