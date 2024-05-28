@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdint.h>
 #include <C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c-sdl/src/include/SDL2/SDL.h>
 #include "mandelbrot.h"
 #include "c_implementation/mandelbrotTools.h"
@@ -53,7 +54,7 @@ void saveBMP(const char *filename, int width, int height, unsigned char *buffer)
     free(img);
 }
 
-int main( int argc, char *argv[] )
+int main(int argc, char* argv[])
 {
      SDL_Init(SDL_INIT_EVERYTHING);
 
@@ -62,7 +63,7 @@ int main( int argc, char *argv[] )
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     // Mandelbrot buffer
-    unsigned char* buf = (unsigned char*)malloc(WIDTH * HEIGHT * 4);  // RGBA buf
+    uint8_t* buf = (uint8_t*)malloc(WIDTH * HEIGHT * 4);  // RGBA buf
     if (buf == NULL) {
         printf("Failed to allocate memory for pixel buffer\n");
         return -1;
@@ -73,10 +74,9 @@ int main( int argc, char *argv[] )
     double zoom = 1.0;
     int processPower = 100;
     int setPoint = 4;
-    double cReal = 0.0;
-    double cImag = 0.0;
 
-    mandelbrot(buf, WIDTH, HEIGHT, cReal, cImag, processPower, setPoint, centerReal, centerImag, zoom);
+    mandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+    // createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
     saveBMP("mandelbrot.bmp", WIDTH, HEIGHT, buf);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
@@ -95,11 +95,11 @@ int main( int argc, char *argv[] )
             }
             else if (e.type == SDL_MOUSEWHEEL)
             {
-                double mouseX = e.wheel.x;
-                double mouseY = e.wheel.y;
+                int mouseX = e.wheel.x;
+                int mouseY = e.wheel.y;
                 SDL_GetMouseState(&mouseX, &mouseY);
-                double mouseRe = (mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom) + centerReal;
-                double mouseIm = (mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom) + centerImag;
+                double mouseRe = ((double)mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom) + centerReal;
+                double mouseIm = ((double)mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom) + centerImag;
 
                 if (e.wheel.y > 0)
                 {

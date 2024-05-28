@@ -9,11 +9,9 @@ global mandelbrot
 ; RDX = height
 ; RCX = processPower;
 ; R8 = setPoint;
-; XMM0 = cReal;
-; XMM1 = cImag;
-; XMM2 = centerReal;
-; XMM3 = centerImag;
-; XMM4 = zoom;
+; xmm0 = centerReal;
+; xmm1 = centerImag;
+; xmm2 = zoom;
 
 mandelbrot:
     ; prologue
@@ -37,61 +35,59 @@ mandelbrot:
     mov r10, 0          ; r10 = idx = 0
 
 for_y_loop:
-    xor r10, r10
-    cvtsi2sd xmm5, r10         ; xmm5 = y = 0
+    xor r11, r11
+    cvtsi2sd xmm3, r10         ; xmm3 = y = 0
+    cvtsi2sd xmm4, r11        ; xmm4 = x = 0
 
 for_x_loop:
+    cmp r10, r9
+    jge end
 
-    ; xmm7 = xReal
-    xor r11, r11
-    cvtsi2sd xmm6, r11        ; xmm6 = x = 0
-
-    cvtsi2sd xmm8, rsi
-    cvtsi2sd xmm9, rdx
+    cvtsi2sd xmm6, rsi        ; width
+    cvtsi2sd xmm7, rdx        ; height
     ; comisd x, WIDTH    TODO MAKE THOSE LOOP CONDITIONS
-    comisd xmm5, xmm8
+    comisd xmm4, xmm6
     jge   end_x_loop
     ; comisd y, HEIGHT
-    comisd xmm6, xmm9
+    comisd xmm3, xmm7
     jge  end
 
     ; increment x
     mov rax, 1
-    cvtsi2sd xmm10, rax
-    addsd xmm5, xmm10
+    cvtsi2sd xmm8, rax
+    addsd xmm4, xmm8
 
     ; double xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal;
-    movsd xmm7, xmm6
+    movsd xmm5, xmm4
     mov   rax, rsi
     shr    rax, 1
-    cvtsi2sd  xmm8, rax ; itod(width)
-    subsd   xmm7, xmm8  ; xReal = (x - width / 2.0)
+    cvtsi2sd  xmm6, rax ; itod(width / 2.0)
+    subsd   xmm5, xmm6  ; xReal = (x - width / 2.0)
     shl     rax,  1
-    cvtsi2sd    xmm8, rax
-    addsd    xmm7, xmm7     ; xReal = (x - width / 2.0) * 2.0
-    addsd   xmm7, xmm7      ; xReal = (x - width / 2.0) * 4.0
-    mulsd   xmm8, xmm4  ; (width * zoom)
-    divsd   xmm7, xmm8  ; xReal = (x - width / 2.0) * 4.0 / (width * zoom)
-    addsd   xmm7, xmm2  ; xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
+    cvtsi2sd    xmm6, rax
+    addsd    xmm5, xmm5     ; xReal = (x - width / 2.0) * 2.0
+    addsd   xmm5, xmm5      ; xReal = (x - width / 2.0) * 4.0
+    mulsd   xmm6, xmm2  ; (width * zoom)
+    divsd   xmm5, xmm6  ; xReal = (x - width / 2.0) * 4.0 / (width * zoom)
+    addsd   xmm5, xmm0  ; xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
 
-    ; xmm8 = yReal
+    ; xmm6 = yReal
 
     ;double yReal = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag;
-    movsd xmm8, xmm5
+    movsd xmm6, xmm3
     mov     rax, rdx
     shr     rax, 1
-    cvtsi2sd xmm9, rax  ; itod(height / 2)
+    cvtsi2sd xmm7, rax  ; itod(height / 2)
     shl     rax, 1
-    cvtsi2sd xmm9, rax
-    subsd   xmm8, xmm9  ; yReal = (y - height / 2.0)
-    addsd   xmm8, xmm8  ; yReal = (y - height / 2.0) * 2.0
-    addsd   xmm8, xmm8  ; yReal = (y - height / 2.0) * 4.0
-    mulsd   xmm9, xmm4  ; (height * zoom)
-    divsd   xmm8, xmm9  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom)
-    addsd   xmm8, xmm3  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
+    cvtsi2sd xmm7, rax
+    subsd   xmm6, xmm7  ; yReal = (y - height / 2.0)
+    addsd   xmm6, xmm6  ; yReal = (y - height / 2.0) * 2.0
+    addsd   xmm6, xmm6  ; yReal = (y - height / 2.0) * 4.0
+    mulsd   xmm7, xmm2  ; (height * zoom)
+    divsd   xmm6, xmm7  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom)
+    addsd   xmm6, xmm1  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
 
-    ; TODO
-    ; implement isInSet(xReal=xmm7, yReal=xmm8, processPower=rcx, setPoint=r8) func
+    ; implement isInSet(xReal=xmm5, yReal=xmm6, processPower=rcx, setPoint=r8) func
     xor r12, r12        ; int i = r12 = 0
     ; for (int i = 0; i < processPower; ++i) {
 is_in_mandelbrot:
@@ -99,45 +95,45 @@ is_in_mandelbrot:
     jge return_zero_iter
     inc r12
     ; x^2 + 2xyj - y^2
-    ; xmm7 = xReal^2 - yReal^2
-    ; xmm8 = 2xRealyReal
-    movsd xmm9, xmm7
-    movsd xmm10, xmm8
+    ; xmm5 = xReal^2 - yReal^2
+    ; xmm6 = 2xRealyReal
+    movsd xmm7, xmm5
+    movsd xmm8, xmm6
 
-    mulsd xmm9, xmm9 ; x^2
-    mulsd xmm10, xmm10 ; y^2
+    mulsd xmm7, xmm7 ; x^2
+    mulsd xmm8, xmm8 ; y^2
 
-    subsd xmm9, xmm10   ; xmm9 = x^2 - y^2
-    movsd xmm10, xmm8   ; xmm10 = y
-    mulsd xmm10, xmm7   ; xy
-    addsd xmm10, xmm10  ; 2xy
+    subsd xmm7, xmm8   ; xmm7 = x^2 - y^2
+    movsd xmm8, xmm6   ; xmm8 = y
+    mulsd xmm8, xmm5   ; xy
+    addsd xmm8, xmm8  ; 2xy
 
     ; xReal = xReal^2 - yReal^2
-    movsd xmm7, xmm9
+    movsd xmm5, xmm7
     ; yReal = 2 * xReal * yReal
-    movsd xmm8, xmm10
+    movsd xmm6, xmm8
 
     ;     Complex zAdded = complexAdd(zPowered, c);
 
     ; z + c = (Zx + Cx) + j(Zy + Cy)
-    addsd xmm7, xmm0    ; xReal + cReal
-    addsd xmm8, xmm1    ; yReal + cImag
+    addsd xmm5, xmm0    ; xReal + cReal
+    addsd xmm6, xmm1    ; yReal + cImag
 
     ; Calculate |z|
 
-    movapd xmm9, xmm8
-    mulsd xmm9, xmm8    ; x^2
-    movapd xmm10, xmm7
-    mulsd xmm10, xmm7  ; y^2
-    addsd xmm9, xmm10  ; x^2 + y^2
+    movapd xmm7, xmm6
+    mulsd xmm7, xmm6    ; x^2
+    movapd xmm8, xmm5
+    mulsd xmm8, xmm5  ; y^2
+    addsd xmm7, xmm8  ; x^2 + y^2
 
 ; Calculate sqrt(|z|)
-    sqrtsd xmm9, xmm9
+    sqrtsd xmm7, xmm7
 
     ;     if (complexNorm(z) > setPoint)
 
-    cvtsi2sd xmm10, r8   ; setPoint
-    comisd  xmm9, xmm10
+    cvtsi2sd xmm8, r8   ; setPoint
+    comisd  xmm7, xmm8
     jg      draw_pixels
 
     jmp is_in_mandelbrot
@@ -196,10 +192,10 @@ next_pixel:
 
 end_x_loop:
     xor r11, r11
-    cvtsi2sd xmm6, r11        ; xmm6 = x = 0
+    cvtsi2sd xmm4, r11        ; xmm4 = x = 0
     mov rax, 1
-    cvtsi2sd xmm10, rax
-    addsd xmm5, xmm10
+    cvtsi2sd xmm8, rax
+    addsd xmm3, xmm8         ; ++y
     jmp for_x_loop
 
 end:
