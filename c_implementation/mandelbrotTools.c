@@ -1,9 +1,5 @@
 #include "mandelbrotTools.h"
-
-double linearInterpolation(double interpolationFactor, double a, double b) {
-    return (b - a) * interpolationFactor + a ;
-}
-
+#include <stdint.h>
 
 int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     if (c == NULL) return -1;
@@ -44,7 +40,7 @@ int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     return 0;   // This is inside the set
 }
 
-void createMandelbrot(unsigned char* pixelBuffer, int width, int height,
+void createMandelbrot(uint8_t* pixelBuffer, int width, int height,
     int processPower, int setPoint, double centerReal, double centerImag, double zoom)
     {
     if (pixelBuffer == NULL || width <= 0 || height <= 0) {

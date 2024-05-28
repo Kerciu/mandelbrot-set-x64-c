@@ -9,7 +9,7 @@ LIB_PATH = C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c-sdl/src/l
 all: $(OBJ_NAME)
 
 $(OBJ_NAME): $(C_SRC:.c=.o) mandelbrot.o
-	$(CC) $(C_SRC:.c=.o) mandelbrot.o -I $(SDL_PATH) -L $(LIB_PATH) -Wl,-subsystem,windows -lmingw32 -lSDL2main -lSDL2 -o $(OBJ_NAME)
+	$(CC) $(C_SRC:.c=.o) -g mandelbrot.o -I $(SDL_PATH) -L $(LIB_PATH) -Wl,-subsystem,windows -lmingw32 -lSDL2main -lSDL2 -o $(OBJ_NAME)
 
 main.o: main.c mandelbrot.h
 	$(CC) $(CFLAGS) -c main.c
