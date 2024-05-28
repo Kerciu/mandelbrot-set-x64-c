@@ -55,44 +55,48 @@ for_x_loop:
     cvtsi2sd xmm7, rdx        ; height
 
     ; Check loop conditions
-    comisd xmm3, xmm7   ; Compare x with width
+    comisd xmm3, xmm7   ; Compare y with height
     jge  end
 
-    comisd xmm4, xmm6   ; Compare y with height
+    comisd xmm4, xmm6   ; Compare x with width
     jge   end_x_loop
 
-    ; Calculate xReal
+    ; Calculate cReal
     movsd xmm5, xmm4
     mov   rax, rsi
     shr    rax, 1
     cvtsi2sd  xmm6, rax ; itod(width / 2.0)
-    subsd   xmm5, xmm6  ; xReal = (x - width / 2.0)
+    subsd   xmm5, xmm6  ; cReal = (x - width / 2.0)
     shl     rax,  1
     cvtsi2sd    xmm6, rax
-    addsd    xmm5, xmm5     ; xReal = (x - width / 2.0) * 2.0
-    addsd   xmm5, xmm5      ; xReal = (x - width / 2.0) * 4.0
+    addsd    xmm5, xmm5     ; cReal = (x - width / 2.0) * 2.0
+    addsd   xmm5, xmm5      ; cReal = (x - width / 2.0) * 4.0
     mulsd   xmm6, xmm2  ; (width * zoom)
-    divsd   xmm5, xmm6  ; xReal = (x - width / 2.0) * 4.0 / (width * zoom)
-    addsd   xmm5, xmm0  ; xReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
+    divsd   xmm5, xmm6  ; cReal = (x - width / 2.0) * 4.0 / (width * zoom)
+    addsd   xmm5, xmm0  ; cReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
 
-    ; Calculate yReal
+    ; Calculate cImag
     movsd xmm6, xmm3
     mov     rax, rdx
     shr     rax, 1
     cvtsi2sd xmm7, rax  ; itod(height / 2)
     shl     rax, 1
     cvtsi2sd xmm7, rax
-    subsd   xmm6, xmm7  ; yReal = (y - height / 2.0)
-    addsd   xmm6, xmm6  ; yReal = (y - height / 2.0) * 2.0
-    addsd   xmm6, xmm6  ; yReal = (y - height / 2.0) * 4.0
+    subsd   xmm6, xmm7  ; cImag = (y - height / 2.0)
+    addsd   xmm6, xmm6  ; cImag = (y - height / 2.0) * 2.0
+    addsd   xmm6, xmm6  ; cImag = (y - height / 2.0) * 4.0
     mulsd   xmm7, xmm2  ; height = (height * zoom)
-    divsd   xmm6, xmm7  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom)
-    addsd   xmm6, xmm1  ; yReal = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
+    divsd   xmm6, xmm7  ; cImag = (y - height / 2.0) * 4.0 / (height * zoom)
+    addsd   xmm6, xmm1  ; cImag = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
 
-    ; Implement isInSet(xReal=xmm5, yReal=xmm6, processPower=rcx, setPoint=r8) func
+    ; Implement isInSet(cReal=xmm5, cImag=xmm6, processPower=rcx, setPoint=r8) func
 
     ; Initialize Iters
     xor r12, r12        ; int i = r12 = 0
+
+    ; Initialize zReal and zImag
+    cvtsi2sd xmm9, r12      ; zReal
+    cvtsi2sd xmm10, r12     ; zImag
 is_in_mandelbrot:
 
     ; Check if Iters >= processPower
@@ -101,34 +105,35 @@ is_in_mandelbrot:
     inc r12
 
     ; x^2 + 2xyj - y^2
-    movsd xmm7, xmm5    ; xmm7 = xReal
-    movsd xmm8, xmm6    ; xmm8 = yReal
+    movsd xmm7, xmm9    ; xmm7 = cReal
+    movsd xmm8, xmm10   ; xmm8 = cImag
 
     mulsd xmm7, xmm7    ; x^2
     mulsd xmm8, xmm8    ; y^2
     subsd xmm7, xmm8    ; xmm7 = x^2 - y^2
 
-    movsd xmm8, xmm6    ; xmm8 = yReal
-    mulsd xmm8, xmm5    ; xy
+    movsd xmm8, xmm10   ; xmm8 = cImag
+    mulsd xmm8, xmm9    ; xy
     addsd xmm8, xmm8    ; 2xy
 
-    ; xReal = xReal^2 - yReal^2
-    movsd xmm5, xmm7
-    ; yReal = 2 * xReal * yReal
-    movsd xmm6, xmm8
+    ; cReal = cReal^2 - cImag^2
+    movsd xmm9, xmm7
+    ; cImag = 2 * cReal * cImag
+    movsd xmm10, xmm8
 
     ; Complex zAdded = complexAdd(zPowered, c);
 
-    ; z + c = (Zx + Cx) + j(Zy + Cy)
-    addsd xmm5, xmm0    ; xReal + cReal
-    addsd xmm6, xmm1    ; yReal + cImag
+    ; double complexAddedReal = zReal + cReal;
+    ; double complexAddedImag = zImag + cImag;
+    addsd xmm9, xmm5
+    addsd xmm10, xmm6
 
     ; Calculate |z|
-    movapd xmm7, xmm6
-    mulsd xmm7, xmm6    ; x^2
-    movapd xmm8, xmm5
-    mulsd xmm8, xmm5  ; y^2
-    addsd xmm7, xmm8  ; x^2 + y^2
+    movapd xmm7, xmm9
+    mulsd xmm7, xmm9     ; x^2
+    movapd xmm8, xmm10
+    mulsd xmm8, xmm10    ; y^2
+    addsd xmm7, xmm8     ; x^2 + y^2
 
     ; Calculate sqrt(|z|)
     sqrtsd xmm7, xmm7
@@ -149,16 +154,30 @@ draw_pixels:
     test r12, r12
     jz draw_black
 
-    mov byte [rdi + r10], 0    ; R
-    mov byte [rdi + r10 + 1], 0  ; G
-    mov byte [rdi + r10 + 2], 0  ; B
+    ; Calculate color based on iters
+    mov rax, r12
+    imul rax, 10
+    movzx rbx, al    ; R = (iters * 10) % 255
+    mov byte [rdi + r10], bl
+
+    mov rax, r12
+    imul rax, 15
+    movzx rbx, al    ; G = (iters * 15) % 255
+    mov byte [rdi + r10 + 1], bl
+
+    mov rax, r12
+    imul rax, 20
+    movzx rbx, al    ; B = (iters * 20) % 255
+    mov byte [rdi + r10 + 2], bl
+
     mov byte [rdi + r10 + 3], 255 ; A
+
     jmp next_pixel
 
 draw_black:
-    mov byte [rdi + r10], dl   ; R
-    mov byte [rdi + r10 + 1], dl ; G
-    mov byte [rdi + r10 + 2], dl ; B
+    mov byte [rdi + r10], 0    ; R
+    mov byte [rdi + r10 + 1], 0  ; G
+    mov byte [rdi + r10 + 2], 0  ; B
     mov byte [rdi + r10 + 3], 255 ; A
 
 next_pixel:
