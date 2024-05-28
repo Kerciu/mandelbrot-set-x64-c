@@ -176,8 +176,8 @@ draw_black:
 
     jmp next_pixel
 
-
-mov rax, r12
+draw_rgb:
+    mov rax, r12
     imul rax, rax, 10
     mov rcx, 255
     xor rdx, rdx
