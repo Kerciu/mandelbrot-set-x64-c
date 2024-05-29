@@ -20,6 +20,7 @@ mandelbrot:
     mov rbp, rsp
     push rbx
     push r12
+    push r13
 
     ; Body
 
@@ -32,67 +33,70 @@ mandelbrot:
     ; Calculate buffer size: r9 = bufferSize = 4 * width * height
     mov rax, rsi
     imul rax, rdx
-    sar rax, 2
+    sal rax, 2
     mov r9, rax
 
     ; Initialize idx = 0
-    mov r10, 0          ; r10 = idx = 0
+    xor r10, r10          ; r10 = idx = 0
 
     ; Initialize y = 0
+    xor r12, r12
+
     pxor xmm3, xmm3         ; xmm3 = y = 0
+    pxor xmm4, xmm4        ; xmm4 = x = 0
 
 for_y_loop:
     ; Initialize x = 0
     xor r11, r11
-    pxor xmm4, xmm4        ; xmm4 = x = 0
 
 for_x_loop:
     ; Check if idx >= bufferSize
     cmp r10, r9
     jge end
 
-    cvtsi2sd xmm6, rsi        ; width
-    cvtsi2sd xmm7, rdx        ; height
-
     ; Check loop conditions
-    comisd xmm3, xmm7   ; Compare y with height
-    jge  end
+    mov rax, rdx
+    dec rax
+    cmp r12, rax   ; Compare y with height - 1
+    jnl  end
 
-    comisd xmm4, xmm6   ; Compare x with width
-    jge   end_x_loop
+    mov rax, rsi
+    dec rax
+    cmp r11, rax   ; Compare x with width - 1
+    jnl   end_x_loop
 
     ; Calculate cReal
-    movsd xmm5, xmm4
-    mov   rax, rsi
-    sar    rax, 1
-    cvtsi2sd  xmm6, rax ; itod(width / 2.0)
-    subsd   xmm5, xmm6  ; cReal = (x - width / 2.0)
-    sal     rax,  1
-    cvtsi2sd    xmm6, rax
-    addsd    xmm5, xmm5     ; cReal = (x - width / 2.0) * 2.0
-    addsd   xmm5, xmm5      ; cReal = (x - width / 2.0) * 4.0
-    mulsd   xmm6, xmm2  ; (width * zoom)
-    divsd   xmm5, xmm6  ; cReal = (x - width / 2.0) * 4.0 / (width * zoom)
-    addsd   xmm5, xmm0  ; cReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
+    cvtsi2sd xmm5, r11  ; convert x to double
+    mov rax, rsi        ; rax = width
+    sar rax, 1          ; rax = width / 2
+    cvtsi2sd xmm3, rax
+    subsd   xmm5, xmm3  ; xmm5 = x - width / 2
+    addsd   xmm5, xmm5
+    addsd   xmm5, xmm5  ; xmm5 = (x - width / 2) * 4
+    sal rax, 1
+    cvtsi2sd xmm3, rax
+    mulsd   xmm3, xmm2  ; xmm3 = width * zoom
+    divsd   xmm5, xmm3  ; xmm5 = (x - width / 2) * 4 / (width * zoom)
+    addsd   xmm5, xmm0  ; xmm5 = cReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
 
     ; Calculate cImag
-    movsd xmm6, xmm3
-    mov     rax, rdx
-    sar     rax, 1
-    cvtsi2sd xmm7, rax  ; itod(height / 2)
-    sal     rax, 1
-    cvtsi2sd xmm7, rax
-    subsd   xmm6, xmm7  ; cImag = (y - height / 2.0)
-    addsd   xmm6, xmm6  ; cImag = (y - height / 2.0) * 2.0
-    addsd   xmm6, xmm6  ; cImag = (y - height / 2.0) * 4.0
-    mulsd   xmm7, xmm2  ; height = (height * zoom)
-    divsd   xmm6, xmm7  ; cImag = (y - height / 2.0) * 4.0 / (height * zoom)
-    addsd   xmm6, xmm1  ; cImag = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
+    cvtsi2sd xmm6, r12
+    mov rax, rdx
+    sar rax, 1
+    cvtsi2sd xmm4, rax
+    subsd  xmm6, xmm3
+    addsd  xmm6, xmm5
+    addsd  xmm6, xmm5
+    sal  rax, 1
+    cvtsi2sd xmm4, rax
+    mulsd   xmm4, xmm2
+    divsd    xmm6, xmm4
+    addsd   xmm6, xmm1  ; xmm6 = cImag = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
 
-    ; Implement isInSet(cReal=xmm5, cImag=xmm6, processPower=rcx, setPoint=r8) func
+    ; isInSet(cReal=xmm5, cImag=xmm6, processPower=rcx, setPoint=r8)
 
     ; Initialize Iters
-    xor r12, r12        ; int i = r12 = 0
+    xor r13, r13        ; int iters = r13 = 0
 
     ; Initialize zReal and zImag
     pxor xmm9, xmm9      ; zReal
@@ -100,9 +104,9 @@ for_x_loop:
 is_in_mandelbrot:
 
     ; Check if Iters >= processPower
-    cmp r12, rcx
+    cmp r13, rcx
     jge return_zero_iter
-    inc r12
+    inc r13
 
     ; x^2 + 2xyj - y^2
     movsd xmm7, xmm9    ; xmm7 = zReal
@@ -132,37 +136,31 @@ is_in_mandelbrot:
     mulsd xmm8, xmm10    ; y^2
     addsd xmm7, xmm8     ; x^2 + y^2
 
-    ; Calculate sqrt(|z|)
-    sqrtsd xmm7, xmm7
-
-    ; Check if (complexNorm(z) > setPoint)
+    ; Check if |z|^2 > setPoint^2
     cvtsi2sd xmm8, r8   ; xmm8 = setPoint
-    comisd  xmm7, xmm8
-    jg      draw_pixels
+    mulsd xmm8, xmm8    ; xmm8 = setPoint^2
+    comisd xmm7, xmm8
+    ja draw_pixels
 
     jmp is_in_mandelbrot
 
 return_zero_iter:
-    xor r12, r12
+    xor r13, r13
+    jmp draw_black
 
 draw_pixels:
-
-    ; Check if Iters == 0
-    test r12, r12
-    jz draw_black
-
     ; Calculate color based on iters
-    mov rax, r12
+    mov rax, r13
     imul rax, 10
     and rax, 0xFF    ; R = (iters * 10) % 255
     mov byte [rdi + r10], al
 
-    mov rax, r12
+    mov rax, r13
     imul rax, 15
     and rax, 0xFF    ; G = (iters * 15) % 255
     mov byte [rdi + r10 + 1], al
 
-    mov rax, r12
+    mov rax, r13
     imul rax, 20
     and rax, 0xFF    ; B = (iters * 20) % 255
     mov byte [rdi + r10 + 2], al
@@ -185,26 +183,17 @@ next_pixel:
     cmp r10, r9
     jge end
 
-    ; Check if x counter >= width
-    cmp r11, rsi
-    jl  for_x_loop
+    ; Check if x counter < width
+    jmp  for_x_loop
 
 end_x_loop:
-    ; Clear x counter ( r11 ) and increment y counter ( r10 - xmm3 )
-    xor r11, r11
-    pxor xmm4, xmm4        ; xmm4 = x = 0
-    mov rax, 1
-    cvtsi2sd xmm8, rax
-    addsd xmm3, xmm8         ; ++y
-
-    ; Check condition if y < height
-    cvtsi2sd xmm7, rdx        ; height
-    comisd xmm3, xmm7
-    jl for_y_loop            ; If y < height, continue for_y_loop
+    ; Clear x counter ( r11 ) and increment y counter ( r12 )
+    inc r12     ; increment y
+    jmp for_y_loop
 
 end:
-
     ; Epilogue
+    pop r13
     pop r12
     pop rbx
     mov rsp, rbp
