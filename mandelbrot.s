@@ -21,6 +21,7 @@ mandelbrot:
     push rbx
     push r12
     push r13
+    push r14
 
     ; Body
 
@@ -33,191 +34,174 @@ mandelbrot:
     ; Calculate buffer size: r9 = bufferSize = 4 * width * height
     mov rax, rsi
     imul rax, rdx
-    sal rax, 2
+    shl rax, 2
     mov r9, rax
 
     ; Initialize idx = 0
     xor r10, r10          ; r10 = idx = 0
 
-    ; Initialize y = 0
-    xor r12, r12
-
-    pxor xmm3, xmm3         ; xmm3 = y = 0
-    pxor xmm4, xmm4        ; xmm4 = x = 0
+    ; Initialize y = (double) height
+    cvtsi2sd        xmm3, rdx
 
 for_y_loop:
-    ; Initialize x = 0
-    xor r11, r11
+    ; Initialize x = (double) width
+    cvtsi2sd xmm4, rsi
 
 for_x_loop:
+    ; Check loop conditions
+    pxor   xmm5, xmm5
+    ucomisd xmm3, xmm5
+    jbe     end
+
+    ucomisd xmm4, xmm5
+    jbe     end_x_loop
+
     ; Check if idx >= bufferSize
     cmp r10, r9
     jge end
 
-    ; Check loop conditions
-    mov rax, rdx
-    dec rax
-    cmp r12, rax   ; Compare y with height - 1
-    jnl  end
-
-    mov rax, rsi
-    dec rax
-    cmp r11, rax   ; Compare x with width - 1
-    jnl   end_x_loop
-
     ; Calculate cReal
-    cvtsi2sd xmm5, r11  ; convert x to double
-    mov rax, rsi        ; rax = width
-    sar rax, 1          ; rax = width / 2
-    cvtsi2sd xmm3, rax
-    subsd   xmm5, xmm3  ; xmm5 = x - width / 2
-    addsd   xmm5, xmm5
-    addsd   xmm5, xmm5  ; xmm5 = (x - width / 2) * 4
-    sal rax, 1
-    cvtsi2sd xmm3, rax
-    mulsd   xmm3, xmm2  ; xmm3 = width * zoom
-    divsd   xmm5, xmm3  ; xmm5 = (x - width / 2) * 4 / (width * zoom)
-    addsd   xmm5, xmm0  ; xmm5 = cReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal
+    ; xmm6 = cReal = (x / width - 0.5) * 4.0 / zoom + centerReal
+    ; (4x - 2width) / (width * zoom) + centerReal
+    movsd  xmm6, xmm4
+    mov rax, 4
+    cvtsi2sd xmm5, rax
+    mulsd xmm6, xmm5        ; 4x
+    mov rax, 2
+    cvtsi2sd xmm5, rax
+    cvtsi2sd xmm12, rsi
+    mulsd xmm12, xmm5       ; 2width
+    subsd xmm6, xmm12       ; 4x - 2width
+    cvtsi2sd xmm5, rsi
+    mulsd xmm5, xmm2        ; width * zoom
+    divsd xmm6, xmm5
+    addsd xmm6, xmm0
 
     ; Calculate cImag
-    cvtsi2sd xmm6, r12
-    mov rax, rdx
-    sar rax, 1
-    cvtsi2sd xmm4, rax
-    subsd  xmm6, xmm3
-    addsd  xmm6, xmm5
-    addsd  xmm6, xmm5
-    sal  rax, 1
-    cvtsi2sd xmm4, rax
-    mulsd   xmm4, xmm2
-    divsd    xmm6, xmm4
-    addsd   xmm6, xmm1  ; xmm6 = cImag = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag
+    ; xmm8 = cImag = (y / height - 0.5) * 4.0 / zoom + centerImag
+    movsd  xmm7, xmm3
+    mov rax, 4
+    cvtsi2sd xmm5, rax
+    mulsd xmm7, xmm5        ; 4x
+    mov rax, 2
+    cvtsi2sd xmm5, rax
+    cvtsi2sd xmm12, rdx
+    mulsd xmm12, xmm5       ; 2width
+    subsd xmm7, xmm12       ; 4x - 2width
+    cvtsi2sd xmm5, rdx
+    mulsd xmm5, xmm2        ; width * zoom
+    divsd xmm7, xmm5
+    addsd xmm7, xmm1
 
-    ; isInSet(cReal=xmm5, cImag=xmm6, processPower=rcx, setPoint=r8)
+    ; isInSet(cReal=xmm5, cImag=xmm8, processPower=rcx, setPoint=r8)
 
     ; Initialize Iters
-    xor r13, r13        ; int iters = r13 = 0
+    xor r13, r13        ; int i = 0
 
     ; Initialize zReal and zImag
-    pxor xmm9, xmm9      ; zReal
-    pxor xmm10, xmm10     ; zImag
-    pxor xmm9, xmm9      ; zReal
-    pxor xmm10, xmm10     ; zImag
+    pxor xmm8, xmm8      ; zReal
+    pxor xmm9, xmm9     ; zImag
 is_in_mandelbrot:
 
-    ; Check if Iters >= processPower
-    cmp r13, rcx
-    jge return_zero_iter
+    ; Check if Iters < processPower
+    mov rax, rcx
+    cmp r13, rax
+    jge return_iter
     inc r13
 
     ; x^2 + 2xyj - y^2
-    movsd xmm7, xmm9    ; xmm7 = zReal
-    movsd xmm8, xmm10   ; xmm8 = zImag
-    movsd xmm7, xmm9    ; xmm7 = zReal
-    movsd xmm8, xmm10   ; xmm8 = zImag
+    movsd xmm10, xmm8    ; xmm10 = zReal copy
+    movsd xmm11, xmm9   ; xmm11 = zImag copy
 
-    mulsd xmm7, xmm7    ; zReal^2
-    mulsd xmm8, xmm8    ; zImag^2
-    subsd xmm7, xmm8    ; xmm7 = zReal^2 - zImag^2
-    mulsd xmm7, xmm7    ; zReal^2
-    mulsd xmm8, xmm8    ; zImag^2
-    subsd xmm7, xmm8    ; xmm7 = zReal^2 - zImag^2
+    mulsd xmm10, xmm10    ; zReal^2
+    mulsd xmm11, xmm11    ; zImag^2
+    subsd xmm10, xmm11    ; xmm10 = zReal^2 - zImag^2
 
-    movsd xmm8, xmm10   ; xmm8 = zImag
-    mulsd xmm8, xmm9    ; zReal * zImag
-    addsd xmm8, xmm8    ; 2 * zReal * zImag
-    movsd xmm8, xmm10   ; xmm8 = zImag
-    mulsd xmm8, xmm9    ; zReal * zImag
-    addsd xmm8, xmm8    ; 2 * zReal * zImag
+    movsd xmm11, xmm9   ; xmm11 = zImag
+    mulsd xmm11, xmm8    ; zReal * zImag
+    addsd xmm11, xmm11    ; xmm11 = 2 * zReal * zImag
 
     ; zReal = complexSquaredReal + cReal
-    addsd xmm7, xmm5    ; xmm7 = zReal = (zReal^2 - zImag^2) + cReal
+    addsd xmm10, xmm6    ; xmm9 = zReal = (zReal^2 - zImag^2) + cReal
     ; zReal = complexSquaredReal + cReal
-    addsd xmm7, xmm5    ; xmm7 = zReal = (zReal^2 - zImag^2) + cReal
+    addsd xmm11, xmm7    ; xmm9 = zReal = (zReal^2 - zImag^2) + cReal
 
-    ; zImag = complexSquaredImag + cImag
-    addsd xmm8, xmm6    ; xmm8 = zImag = (2 * zReal * zImag) + cImag
-
-    movsd xmm9, xmm7    ; update zReal
-    movsd xmm10, xmm8   ; update zImag
-    ; zImag = complexSquaredImag + cImag
-    addsd xmm8, xmm6    ; xmm8 = zImag = (2 * zReal * zImag) + cImag
-
-    movsd xmm9, xmm7    ; update zReal
-    movsd xmm10, xmm8   ; update zImag
+    ; Update zReal and zImag
+    movsd xmm8, xmm10
+    movsd xmm9, xmm11
 
     ; Calculate |z|
-    movsd xmm7, xmm9
-    movsd xmm7, xmm9
-    mulsd xmm7, xmm9     ; x^2
+    movsd xmm10, xmm8
+    movsd xmm11, xmm9
+    mulsd xmm10, xmm10
+    mulsd xmm11, xmm11
+    addsd xmm10, xmm11  ; xmm10 = |z|
+
+    ; Check if |z| > setPoint^2
+    mov rax, r8
+    imul rax, r8
+    cvtsi2sd xmm11, rax   ; xmm10 = setPoint ^ 2
+    ucomisd xmm10, xmm11
+    jbe is_in_mandelbrot
+
+    ; Save zReal and zImag before updating them
+    movsd xmm10, xmm8
+    movsd xmm11, xmm9
+
+    ; Update zReal and zImag
     movsd xmm8, xmm10
-    movsd xmm8, xmm10
-    mulsd xmm8, xmm10    ; y^2
-    addsd xmm7, xmm8     ; x^2 + y^2
+    movsd xmm9, xmm11
 
-    ; Check if |z|^2 > setPoint^2
-    cvtsi2sd xmm8, r8   ; xmm8 = setPoint
-    mulsd xmm8, xmm8    ; xmm8 = setPoint^2
-    comisd xmm7, xmm8
-    ja draw_pixels
+return_iter:
+    mov rax, rcx
+    cmp r13, rax
+    jne  iters_not_equal_process
 
-    jmp is_in_mandelbrot
-
-return_zero_iter:
-    xor r13, r13
-    jmp draw_black
-
-draw_pixels:
-    ; Calculate color based on iters
-    mov rax, r13
-    imul rax, 10
-    and rax, 0xFF    ; R = (iters * 10) % 255
-    mov byte [rdi + r10], al
-    and rax, 0xFF    ; R = (iters * 10) % 255
-    mov byte [rdi + r10], al
-
-    mov rax, r13
-    imul rax, 15
-    and rax, 0xFF    ; G = (iters * 15) % 255
-    mov byte [rdi + r10 + 1], al
-    and rax, 0xFF    ; G = (iters * 15) % 255
-    mov byte [rdi + r10 + 1], al
-
-    mov rax, r13
-    imul rax, 20
-    and rax, 0xFF    ; B = (iters * 20) % 255
-    mov byte [rdi + r10 + 2], al
-    and rax, 0xFF    ; B = (iters * 20) % 255
-    mov byte [rdi + r10 + 2], al
-
-    mov byte [rdi + r10 + 3], 255 ; A
-
-    jmp next_pixel
-
-draw_black:
-    mov byte [rdi + r10], 0    ; R
-    mov byte [rdi + r10 + 1], 0  ; G
-    mov byte [rdi + r10 + 2], 0  ; B
-    mov byte [rdi + r10 + 3], 255 ; A
+    mov rbx, 0
+    jmp draw_pixel
 
 next_pixel:
-    add r10, 4       ; Move to next pixel
-    inc r11          ; Increment x
-
-    ; Check if idx >= bufferSize
-    cmp r10, r9
-    jge end
+    add r10, 4
+    mov rax, 1
+    cvtsi2sd xmm5, rax
+    subsd  xmm4, xmm5    ; decrement x
 
     ; Check if x counter < width
     jmp  for_x_loop
 
+iters_not_equal_process:
+    ; r = (iters * 255) / processPower;
+    mov rax, r13
+    imul rax, 255
+    div rcx
+    mov rbx, rax        ; RBX = (iters * 255) / processPower;
+
+draw_pixel:
+    mov rax, rdx
+    cvtsd2si r14, xmm3
+    sub rax, r14
+    mul rsi
+    cvtsd2si r14, xmm4
+    add rax, r14
+    shl rax, 2
+    mov r10, rax        ; r10 = pixelIdx
+
+    mov byte[rdi + r10], bl
+    mov byte[rdi + r10], bl
+    mov byte[rdi + r10], bl
+    mov byte[rdi + r10], 255
+
+    jmp next_pixel
+
 end_x_loop:
-    ; Clear x counter ( r11 ) and increment y counter ( r12 )
-    inc r12     ; increment y
+    mov rax, 1
+    cvtsi2sd xmm5, rax
+    subsd xmm3, xmm5    ; decrement y
     jmp for_y_loop
 
 end:
     ; Epilogue
+    pop r14
     pop r13
     pop r12
     pop rbx
