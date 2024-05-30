@@ -101,6 +101,8 @@ for_x_loop:
     ; Initialize zReal and zImag
     pxor xmm9, xmm9      ; zReal
     pxor xmm10, xmm10     ; zImag
+    pxor xmm9, xmm9      ; zReal
+    pxor xmm10, xmm10     ; zImag
 is_in_mandelbrot:
 
     ; Check if Iters >= processPower
@@ -111,7 +113,12 @@ is_in_mandelbrot:
     ; x^2 + 2xyj - y^2
     movsd xmm7, xmm9    ; xmm7 = zReal
     movsd xmm8, xmm10   ; xmm8 = zImag
+    movsd xmm7, xmm9    ; xmm7 = zReal
+    movsd xmm8, xmm10   ; xmm8 = zImag
 
+    mulsd xmm7, xmm7    ; zReal^2
+    mulsd xmm8, xmm8    ; zImag^2
+    subsd xmm7, xmm8    ; xmm7 = zReal^2 - zImag^2
     mulsd xmm7, xmm7    ; zReal^2
     mulsd xmm8, xmm8    ; zImag^2
     subsd xmm7, xmm8    ; xmm7 = zReal^2 - zImag^2
@@ -119,7 +126,12 @@ is_in_mandelbrot:
     movsd xmm8, xmm10   ; xmm8 = zImag
     mulsd xmm8, xmm9    ; zReal * zImag
     addsd xmm8, xmm8    ; 2 * zReal * zImag
+    movsd xmm8, xmm10   ; xmm8 = zImag
+    mulsd xmm8, xmm9    ; zReal * zImag
+    addsd xmm8, xmm8    ; 2 * zReal * zImag
 
+    ; zReal = complexSquaredReal + cReal
+    addsd xmm7, xmm5    ; xmm7 = zReal = (zReal^2 - zImag^2) + cReal
     ; zReal = complexSquaredReal + cReal
     addsd xmm7, xmm5    ; xmm7 = zReal = (zReal^2 - zImag^2) + cReal
 
@@ -128,10 +140,17 @@ is_in_mandelbrot:
 
     movsd xmm9, xmm7    ; update zReal
     movsd xmm10, xmm8   ; update zImag
+    ; zImag = complexSquaredImag + cImag
+    addsd xmm8, xmm6    ; xmm8 = zImag = (2 * zReal * zImag) + cImag
+
+    movsd xmm9, xmm7    ; update zReal
+    movsd xmm10, xmm8   ; update zImag
 
     ; Calculate |z|
     movsd xmm7, xmm9
+    movsd xmm7, xmm9
     mulsd xmm7, xmm9     ; x^2
+    movsd xmm8, xmm10
     movsd xmm8, xmm10
     mulsd xmm8, xmm10    ; y^2
     addsd xmm7, xmm8     ; x^2 + y^2
@@ -154,14 +173,20 @@ draw_pixels:
     imul rax, 10
     and rax, 0xFF    ; R = (iters * 10) % 255
     mov byte [rdi + r10], al
+    and rax, 0xFF    ; R = (iters * 10) % 255
+    mov byte [rdi + r10], al
 
     mov rax, r13
     imul rax, 15
     and rax, 0xFF    ; G = (iters * 15) % 255
     mov byte [rdi + r10 + 1], al
+    and rax, 0xFF    ; G = (iters * 15) % 255
+    mov byte [rdi + r10 + 1], al
 
     mov rax, r13
     imul rax, 20
+    and rax, 0xFF    ; B = (iters * 20) % 255
+    mov byte [rdi + r10 + 2], al
     and rax, 0xFF    ; B = (iters * 20) % 255
     mov byte [rdi + r10 + 2], al
 
