@@ -94,12 +94,12 @@ void createMandelbrotAssemblified(uint8_t* pixelBuffer, int width, int height,
     int bufferSize = width * height * 4;
     int idx = 0;
 
-    for (double y = 0; y < height; ++y) {
-        for (double x = 0; x < width; ++x) {
+    for (double y = (double) height; y > 0; --y) {
+        for (double x = (double) width; x > 0; --x) {
             if (idx >= bufferSize) return;
 
-            double cReal = (x - width / 2.0) * 4.0 / (width * zoom) + centerReal;
-            double cImag = (y - height / 2.0) * 4.0 / (height * zoom) + centerImag;
+            double cReal = ((((x / width) - 0.5) * 4.0 / zoom) + centerReal);
+            double cImag = ((((y / height) - 0.5) * 4.0 / zoom) + centerImag);
 
             int iters = 0;
 
@@ -123,19 +123,24 @@ void createMandelbrotAssemblified(uint8_t* pixelBuffer, int width, int height,
                 }
             }
 
-            if (iters == 0) {
-                pixelBuffer[idx++] = 0; // R
-                pixelBuffer[idx++] = 0; // G
-                pixelBuffer[idx++] = 0; // B
-                pixelBuffer[idx++] = 255; // A
-
+            uint8_t r, g, b, a;
+            if (iters == processPower) {
+                r = 0;
+                g = 0;
+                b = 0;
+                a = 255;
+            } else {
+                r = (iters * 255) / processPower;
+                g = (iters * 255) / processPower;
+                b = (iters * 255) / processPower;
+                a = 255;
             }
-            else {
-                pixelBuffer[idx++] = (iters * 10) % 255; // R
-                pixelBuffer[idx++] = (iters * 15) % 255; // G
-                pixelBuffer[idx++] = (iters * 20) % 255; // B
-                pixelBuffer[idx++] = 255; // A
+
+            int pixelIdx = 4 * ((height - y) * width + x);
+            *(pixelBuffer + pixelIdx) = r;
+            *(pixelBuffer + pixelIdx + 1) = g;
+            *(pixelBuffer + pixelIdx + 2) = b;
+            *(pixelBuffer + pixelIdx + 3) = a;
             }
         }
     }
-}
