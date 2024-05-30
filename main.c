@@ -4,10 +4,7 @@
 #include <stdint.h>
 #include <C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c-sdl/src/include/SDL2/SDL.h>
 #include "mandelbrot.h"
-#include "c_implementation/mandelbrotTools.h"
-
-#define WIDTH 800
-#define HEIGHT 600
+#include "mandelbrotTools.h"
 
 void saveBMP(const char *filename, int width, int height, unsigned char *buffer) {
     FILE *f;
@@ -56,14 +53,17 @@ void saveBMP(const char *filename, int width, int height, unsigned char *buffer)
 
 int main(int argc, char* argv[])
 {
-     SDL_Init(SDL_INIT_EVERYTHING);
+    SDL_Init(SDL_INIT_EVERYTHING);
+
+    long WIDTH = 800;
+    long HEIGHT = 600;
 
     // Window creation
     SDL_Window *window = SDL_CreateWindow("Mandelbrot Set", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
     // Mandelbrot buffer
-    uint8_t* buf = (uint8_t*)malloc(WIDTH * HEIGHT * 4);  // RGBA buf
+    uint8_t* buf = (uint8_t*)malloc(WIDTH * HEIGHT * 4 * sizeof(uint8_t*));  // RGBA buf
     if (buf == NULL) {
         printf("Failed to allocate memory for pixel buffer\n");
         return -1;
@@ -72,11 +72,11 @@ int main(int argc, char* argv[])
     double centerReal = -0.5;
     double centerImag = 0.0;
     double zoom = 1.0;
-    int processPower = 100;
-    int setPoint = 4;
+    long processPower = 100;
+    long setPoint = 4;
 
     mandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
-    // createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+    // createMandelbrotAssemblified(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
     saveBMP("mandelbrot.bmp", WIDTH, HEIGHT, buf);
 
     SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
@@ -103,11 +103,11 @@ int main(int argc, char* argv[])
 
                 if (e.wheel.y > 0)
                 {
-                    zoom *= 1.1;
+                    zoom *= 1.5;
                 }
                 else if (e.wheel.y < 0)
                 {
-                    zoom /= 1.1;
+                    zoom /= 1.5;
                 }
                 centerReal = mouseRe + (centerReal - mouseRe) / 1.1;
                 centerImag = mouseIm + (centerImag - mouseIm) / 1.1;
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
         }
         if (needRedraw)
         {
-            createMandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+            createMandelbrotAssemblified(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
             SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
             SDL_DestroyTexture(texture);
             texture = SDL_CreateTextureFromSurface(renderer, surface);
