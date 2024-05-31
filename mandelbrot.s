@@ -1,9 +1,5 @@
 section .text
 global mandelbrot
-
-; int mandelbrot(unsigned char* pixelBuffer, int width, int height,
-;                int processPower, int setPoint, double centerReal,
-;                double centerImag, double zoom);
 ;
 ; RDI = pixelBuffer;
 ; RSI = width;
@@ -23,15 +19,13 @@ mandelbrot:
     push r12
     push r13
     push r14
-    push r15
 
     ; Body
-    mov [rbp - 8], rdx
 
     ; Check if width or height are not positive
-    test rsi, rsi
+    cmp rsi, 0
     jle end
-    test rdx, rdx
+    cmp rdx, 0
     jle end
 
     ; Calculate buffer size: r9 = bufferSize = 4 * width * height
@@ -41,67 +35,56 @@ mandelbrot:
     mov r9, rax
 
     ; Initialize y = 0 (integer for loop control)
-    xor r12, r12          ; r12 = y = 0
+    mov r10, 0          ; yRegister = r10 = y = 0
 
 for_y_loop:
     ; Check if y < height
-    mov rax, [rbp - 8]
-    sub rax, 1
-    cmp r12, rax
+    cmp r10, rdx
     jge end
 
     ; Initialize x = 0 (integer for loop control)
-    xor r14, r14          ; r14 = x = 0
+    mov r11, 0          ; xRegister = r11 = x = 0
 
 for_x_loop:
     ; Check if x < width
-    mov rax, rsi
-    sub rax, 1
-    cmp r14, rax
+    cmp r11, rsi
     jge end_x_loop
 
     ; Calculate cReal
     ; xmm6 = cReal = (x / width - 0.5) * 4.0 / zoom + centerReal
     ; cReal = (4x - 2width) / (width * zoom) + centerReal
-    mov rax, r14
-    cvtsi2sd xmm4, rax
-    mov rax, 4
-    cvtsi2sd xmm5, rax
-    mulsd xmm4, xmm5        ; 4x
-    mov rax, 2
-    cvtsi2sd xmm5, rax
-    cvtsi2sd xmm12, rsi
-    mulsd xmm12, xmm5       ; 2width
-    subsd xmm4, xmm12       ; 4x - 2width
-    cvtsi2sd xmm5, rsi
-    mulsd xmm5, xmm2        ; width * zoom
-    divsd xmm4, xmm5
-    addsd xmm4, xmm0
-    movsd xmm6, xmm4        ; xmm6 = cReal
+    mov rax, r11
+    shl rax, 2
+    cvtsi2sd xmm3, rax      ; 4x
+    mov rax, rsi
+    shl rax, 1
+    cvtsi2sd xmm4, rax      ; 2width
+    movsd xmm6, xmm3        ; cReal = 4x
+    subsd xmm6, xmm4        ; cReal = 4x - 2 width
+    cvtsi2sd xmm3, rsi
+    mulsd xmm3, xmm2        ; width * zoom
+    divsd xmm6, xmm3
+    addsd xmm6, xmm0        ; xmm6 = cReal
 
     ; Calculate cImag
     ; xmm7 = cImag = (y / height - 0.5) * 4.0 / zoom + centerImag
-    mov rax, r12
-    cvtsi2sd xmm4, rax
-    mov rax, 4
-    cvtsi2sd xmm5, rax
-    mulsd xmm4, xmm5        ; 4y
-    mov rax, 2
-    cvtsi2sd xmm5, rax
-    mov rax, [rbp - 8]
-    cvtsi2sd xmm12, rax
-    mulsd xmm12, xmm5       ; 2height
-    subsd xmm4, xmm12       ; 4y - 2height
-    cvtsi2sd xmm5, rax
-    mulsd xmm5, xmm2        ; height * zoom
-    divsd xmm4, xmm5
-    addsd xmm4, xmm1
-    movsd xmm7, xmm4        ; xmm7 = cImag
+
+    mov rax, r10
+    shl rax, 2
+    cvtsi2sd xmm3, rax      ; 4y
+    mov rax, rdx
+    shl rax, 1
+    cvtsi2sd xmm4, rax      ; 2height
+    movsd xmm7, xmm3
+    subsd xmm7, xmm4
+    cvtsi2sd xmm3, rdx
+    mulsd xmm3, xmm2
+    divsd xmm7, xmm3
+    addsd xmm7, xmm0        ; xmm7 = cImag
 
     ; isInSet(cReal=xmm5, cImag=xmm8, processPower=rcx, setPoint=r8)
-
     ; Initialize Iters
-    xor r13, r13        ; int i = 0
+    mov r12, 0        ; int i = r12 = 0
 
     ; Initialize zReal and zImag
     xorpd xmm8, xmm8      ; zReal
@@ -109,34 +92,37 @@ for_x_loop:
 
 is_in_mandelbrot:
     ; Check if Iters >= processPower
-    cmp r13, rcx
+    cmp r12, rcx
     jge max_iter_reached
 
-    ; x^2 + 2xyj - y^2
-    movaps xmm10, xmm8    ; xmm10 = zReal copy
-    movaps xmm11, xmm9   ; xmm11 = zImag copy
+    inc r12
 
+    ; x^2 + 2xyj - y^2
+    movsd xmm10, xmm8    ; xmm10 = zReal copy
     mulsd xmm10, xmm10    ; zReal^2
+
+    movsd xmm11, xmm9   ; xmm11 = zImag copy
     mulsd xmm11, xmm11    ; zImag^2
+
     subsd xmm10, xmm11    ; xmm10 = zReal^2 - zImag^2
 
-    movaps xmm11, xmm9   ; xmm11 = zImag
+    movsd xmm11, xmm9   ; xmm11 = zImag
     mulsd xmm11, xmm8    ; zReal * zImag
     addsd xmm11, xmm11    ; xmm11 = 2 * zReal * zImag
 
     ; zReal = complexSquaredReal + cReal
     addsd xmm10, xmm6    ; xmm9 = zReal = (zReal^2 - zImag^2) + cReal
-    ; zReal = complexSquaredReal + cReal
-    addsd xmm11, xmm7    ; xmm9 = zReal = (zReal^2 - zImag^2) + cReal
+    ; zImag = complexSquaredImag + cImag
+    addsd xmm11, xmm7    ; xmm9 = zImag = (2 * zReal * zImag) + cImag
 
     ; Update zReal and zImag
-    movaps xmm8, xmm10
-    movaps xmm9, xmm11
+    movsd xmm8, xmm10
+    movsd xmm9, xmm11
 
     ; Calculate |z|
-    movaps xmm10, xmm8
-    movaps xmm11, xmm9
+    movsd xmm10, xmm8
     mulsd xmm10, xmm10
+    movsd xmm11, xmm9
     mulsd xmm11, xmm11
     addsd xmm10, xmm11  ; xmm10 = |z|
 
@@ -145,51 +131,53 @@ is_in_mandelbrot:
     imul rax, r8
     cvtsi2sd xmm11, rax   ; xmm10 = setPoint ^ 2
     ucomisd xmm10, xmm11
-    jae return_iter
+    jbe  is_in_mandelbrot
 
-    inc r13
-    jmp is_in_mandelbrot
+    jmp return_iter
 
 max_iter_reached:
-    ; If max iterations reached, set color to black
-    xor rbx, rbx          ; RBX = 0 (black color)
+    ; If max iterations reached (iters == processPower), set color to black
+    mov bl, 0          ; RBX = 0 (black color)
     jmp set_pixel
 
 return_iter:
-    mov rax, r13
+    ; Calculate pixel colors
+    mov rax, r12
     imul rax, 255
-    xor rdx, rdx
-    div rcx
-    mov rbx, rax            ; RBX = (iters * 255) / processPower
+    cqo
+    idiv rcx        ; there is r = g = b = (iter * 255) / processPower in AL register now
+    mov bl, al
 
 set_pixel:
-    ; idx = 4 * (y * width + x)
-    mov rax, rsi        ; rax = width
-    imul rax, r12       ; rax = width * y
-    add rax, r14        ; rax = width * y + x
-    shl rax, 2          ; rax = 4 * (width * y + x)
-    add rdi, rax        ; rdi = pixelBuffer + idx
+    ; long pixelIdx = 4 * (y * width + x);
+    mov rax, r10
+    imul rax, rsi
+    add rax, r11
+    shl rax, 2
+    mov r13, rax        ; r13 = pixelIdx
 
-    ; Set pixel color values
-    mov byte [rdi], bl      ; Set red component
-    mov byte [rdi + 1], bl  ; Set green component
-    mov byte [rdi + 2], bl  ; Set blue component
-    mov byte [rdi + 3], 255 ; Set alpha component
+    add rax, 3
+    cmp rax, r9
+    jge end             ; if (pixelIdx + 3 >= bufferSize) return;
 
-    ; Restore rdi for next pixel calculation
-    sub rdi, 4
+    mov byte [ rsi + r13 ], bl      ; R
+    add r13, 1
+    mov byte [ rsi + r13 ], bl      ; G
+    add r13, 1
+    mov byte [ rsi + r13 ], bl      ; B
+    add r13, 1
+    mov byte [ rsi + r13 ], 255     ; A
 
 next_pixel:
-    inc r14                 ; increment x
+    inc r11                 ; increment x
     jmp for_x_loop
 
 end_x_loop:
-    inc r12                 ; increment y
+    inc r10                 ; increment y
     jmp for_y_loop
 
 end:
     ; Epilogue
-    pop r15
     pop r14
     pop r13
     pop r12
