@@ -138,19 +138,28 @@ is_in_mandelbrot:
 max_iter_reached:
     ; If max iterations reached (iters == processPower), set color to black
     mov bl, 0          ; RBX = 0 (black color)
-    jmp set_pixel
+    jmp calculate_pixel_idx
 
 return_iter:
     ; Calculate pixel colors
+    mov bl, 1       ; Set flag for coloring in bl
+
     mov rax, r12
     push rdx
-    imul rax, 255
-    cqo
-    idiv rcx        ; there is r = g = b = (iter * 255) / processPower in AL register now
-    mov bl, al
+    imul rax, 10
+    and rax, 0xFF
+    mov byte [ rbp - 1 ], al
+    mov rax, r12
+    imul rax, 15
+    and rax, 0xFF
+    mov byte [ rbp - 2 ], al
+    mov rax, r12
+    imul rax, 20
+    and rax, 0xFF
+    mov byte [ rbp - 3 ], al
     pop rdx
 
-set_pixel:
+calculate_pixel_idx:
     ; long pixelIdx = 4 * (y * width + x);
     mov rax, r10
     imul rax, rsi
@@ -162,13 +171,31 @@ set_pixel:
     cmp rax, r9
     jge end             ; if (pixelIdx + 3 >= bufferSize) return;
 
-    mov byte [ rdi + r13 ], 255      ; R
+    test bl, bl
+    jz set_black
+
+
+set_colored:
+    mov bl, byte [ rbp - 1 ]
+    mov byte [ rdi + r13 ], bl      ; R
     add r13, 1
+    mov bl, byte [ rbp - 2 ]
     mov byte [ rdi + r13 ], bl      ; G
     add r13, 1
+    mov bl, byte [ rbp - 3 ]
     mov byte [ rdi + r13 ], bl      ; B
     add r13, 1
-    mov byte [ rdi + r13 ], bl     ; A
+    mov byte [ rdi + r13 ], 255     ; A
+    jmp next_pixel
+
+set_black:
+    mov byte [ rdi + r13], 0
+    add r13, 1
+    mov byte [ rdi + r13], 0
+    add r13, 1
+    mov byte [ rdi + r13], 0
+    add r13, 1
+    mov byte [ rdi + r13], 255
 
 next_pixel:
     inc r11                 ; increment x
