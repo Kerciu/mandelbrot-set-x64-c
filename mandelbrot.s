@@ -160,13 +160,13 @@ set_pixel:
     cmp rax, r9
     jge end             ; if (pixelIdx + 3 >= bufferSize) return;
 
-    mov byte [ rsi + r13 ], bl      ; R
+    mov byte [ rdi + r13 ], bl      ; R
     add r13, 1
-    mov byte [ rsi + r13 ], bl      ; G
+    mov byte [ rdi + r13 ], bl      ; G
     add r13, 1
-    mov byte [ rsi + r13 ], bl      ; B
+    mov byte [ rdi + r13 ], bl      ; B
     add r13, 1
-    mov byte [ rsi + r13 ], 255     ; A
+    mov byte [ rdi + r13 ], 255     ; A
 
 next_pixel:
     inc r11                 ; increment x
