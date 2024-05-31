@@ -189,13 +189,7 @@ set_colored:
     jmp next_pixel
 
 set_black:
-    mov byte [ rdi + r13], 0
-    add r13, 1
-    mov byte [ rdi + r13], 0
-    add r13, 1
-    mov byte [ rdi + r13], 0
-    add r13, 1
-    mov byte [ rdi + r13], 255
+    mov dword [ rdi + r13], 0xFF000000
 
 next_pixel:
     inc r11                 ; increment x
