@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdint.h>
-#include <C:/Users/Kacper/Desktop/mandelbrot-set/mandelbrot-set-x64-c-sdl/src/include/SDL2/SDL.h>
+#include <SDL2/SDL.h>
 #include "mandelbrot.h"
-#include "mandelbrotTools.h"
+// #include "mandelbrotTools.h"
 
 void saveBMP(const char *filename, int width, int height, unsigned char *buffer) {
     FILE *f;
@@ -72,8 +72,8 @@ int main(int argc, char* argv[])
     double centerReal = -0.5;
     double centerImag = 0.0;
     double zoom = 1.0;
-    long processPower = 100;
-    long setPoint = 4;
+    long processPower = 25;
+    long setPoint = 10;
 
     mandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
     // createMandelbrotAssemblified(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
@@ -103,11 +103,11 @@ int main(int argc, char* argv[])
 
                 if (e.wheel.y > 0)
                 {
-                    zoom *= 1.5;
+                    zoom *= 1.3;
                 }
                 else if (e.wheel.y < 0)
                 {
-                    zoom /= 1.5;
+                    zoom /= 1.3;
                 }
                 centerReal = mouseRe + (centerReal - mouseRe) / 1.1;
                 centerImag = mouseIm + (centerImag - mouseIm) / 1.1;
@@ -118,14 +118,15 @@ int main(int argc, char* argv[])
                 int mouseX = e.button.x;
                 int mouseY = e.button.y;
 
-                centerReal += (mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom);
-                centerImag += (mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom);
+                centerReal += ((double) mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom);
+                centerImag += ((double) mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom);
                 needRedraw = 1;
             }
         }
         if (needRedraw)
         {
-            createMandelbrotAssemblified(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+            mandelbrot(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
+            // createMandelbrotAssemblified(buf, WIDTH, HEIGHT, processPower, setPoint, centerReal, centerImag, zoom);
             SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(buf, WIDTH, HEIGHT, 32, WIDTH * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
             SDL_DestroyTexture(texture);
             texture = SDL_CreateTextureFromSurface(renderer, surface);

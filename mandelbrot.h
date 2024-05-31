@@ -1,6 +1,8 @@
 #ifndef MANDELBROT_SET
 #define MANDELBROT_SET
 
-int mandelbrot(unsigned char* pixelBuffer, int width, int height, int processPower, int setPoint, double centerReal, double centerImag, double zoom);
+#include <stdint.h>
+
+void mandelbrot(uint8_t* pixelBuffer, long width, long height, long processPower, long setPolong, double centerReal, double centerImag, double zoom);
 
 #endif

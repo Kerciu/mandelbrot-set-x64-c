@@ -143,10 +143,12 @@ max_iter_reached:
 return_iter:
     ; Calculate pixel colors
     mov rax, r12
+    push rdx
     imul rax, 255
     cqo
     idiv rcx        ; there is r = g = b = (iter * 255) / processPower in AL register now
     mov bl, al
+    pop rdx
 
 set_pixel:
     ; long pixelIdx = 4 * (y * width + x);
@@ -160,13 +162,13 @@ set_pixel:
     cmp rax, r9
     jge end             ; if (pixelIdx + 3 >= bufferSize) return;
 
-    mov byte [ rdi + r13 ], bl      ; R
+    mov byte [ rdi + r13 ], 255      ; R
     add r13, 1
     mov byte [ rdi + r13 ], bl      ; G
     add r13, 1
     mov byte [ rdi + r13 ], bl      ; B
     add r13, 1
-    mov byte [ rdi + r13 ], 255     ; A
+    mov byte [ rdi + r13 ], bl     ; A
 
 next_pixel:
     inc r11                 ; increment x

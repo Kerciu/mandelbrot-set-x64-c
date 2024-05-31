@@ -1,5 +1,4 @@
 #include "mandelbrotTools.h"
-#include <stdint.h>
 
 int isInMandelbrotSet(Complex* c, int processPower, int setPoint) {
     if (c == NULL) return -1;
@@ -84,30 +83,28 @@ void createMandelbrot(uint8_t* pixelBuffer, int width, int height,
     }
 }
 
-void createMandelbrotAssemblified(uint8_t* pixelBuffer, int width, int height,
-                      int processPower, int setPoint, double centerReal,
+void createMandelbrotAssemblified(uint8_t* pixelBuffer, long width, long height,
+                      long processPower, long setPoint, double centerReal,
                       double centerImag, double zoom) {
     if (pixelBuffer == NULL || width <= 0 || height <= 0) {
         return;
     }
 
-    int bufferSize = width * height * 4;
-    int idx = 0;
+    long bufferSize = width * height * 4;
 
-    for (double y = (double) height; y > 0; --y) {
-        for (double x = (double) width; x > 0; --x) {
-            if (idx >= bufferSize) return;
-
-            double cReal = ((((x / width) - 0.5) * 4.0 / zoom) + centerReal);
-            double cImag = ((((y / height) - 0.5) * 4.0 / zoom) + centerImag);
-
-            int iters = 0;
+    for (long y = 0; y < height; ++y) {
+        for (long x = 0; x < width; ++x) {
+            // ((((x / width) - 0.5) * 4.0 / zoom) + centerReal)
+            double cReal = (4 * (double) x - 2 * (double) width) / (width * zoom) + centerReal;
+            // ((((y / height) - 0.5) * 4.0 / zoom) + centerImag)
+            double cImag = (4 * (double) y - 2 * (double) height) / (height * zoom) + centerImag;
 
             double zReal = 0.0;
             double zImag = 0.0;
 
             // z = z ** 2 + c ; Iterate in order to check whether c is in mandelbrot set
-            for (int i = 0; i < processPower; ++i) {
+            long iter;
+            for (iter = 0; iter < processPower; ++iter) {
 
                 double complexSquaredReal = zReal * zReal - zImag * zImag;
                 double complexSquaredImag = 2 * zReal * zImag;
@@ -116,27 +113,29 @@ void createMandelbrotAssemblified(uint8_t* pixelBuffer, int width, int height,
                 zImag = complexSquaredImag + cImag;
 
                 // Check if this point is still in the set
-                double complexNorm = sqrt(zReal * zReal + zImag * zImag);
-                if (complexNorm > setPoint) {
-                    iters =  i;
+                double complexNorm = zReal * zReal + zImag * zImag;
+                if (complexNorm > setPoint * setPoint) {
                     break;
                 }
             }
 
             uint8_t r, g, b, a;
-            if (iters == processPower) {
+            if (iter == processPower) {
                 r = 0;
                 g = 0;
                 b = 0;
                 a = 255;
             } else {
-                r = (iters * 255) / processPower;
-                g = (iters * 255) / processPower;
-                b = (iters * 255) / processPower;
+                r = (iter * 255) / processPower;
+                g = (iter * 255) / processPower;
+                b = (iter * 255) / processPower;
                 a = 255;
             }
 
-            int pixelIdx = 4 * ((height - y) * width + x);
+            int pixelIdx = 4 * (y * width + x);
+
+            if (pixelIdx + 3 >= bufferSize) return;
+
             *(pixelBuffer + pixelIdx) = r;
             *(pixelBuffer + pixelIdx + 1) = g;
             *(pixelBuffer + pixelIdx + 2) = b;
