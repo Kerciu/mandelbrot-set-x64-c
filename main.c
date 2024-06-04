@@ -162,9 +162,10 @@ int main(int argc, char* argv[])
     SDL_FreeSurface(surface);
 
     int quit = 0;
+    int needRedraw;
     SDL_Event e;
     while (!quit) {
-        int needRedraw = 0;
+        needRedraw = 0;
         while (SDL_PollEvent(&e) != 0)
         {
             if (e.type == SDL_QUIT)
@@ -201,6 +202,24 @@ int main(int argc, char* argv[])
                 centerReal += ((double) mouseX - WIDTH / 2.0) * 4.0 / (WIDTH * zoom);
                 centerImag += ((double) mouseY - HEIGHT / 2.0) * 4.0 / (HEIGHT * zoom);
                 needRedraw = 1;
+            }
+            else if (e.type == SDL_KEYDOWN) {
+                if (e.key.keysym.sym == SDLK_UP) {
+                    setPoint++;
+                    needRedraw = 1;
+                }
+                else if (e.key.keysym.sym == SDLK_DOWN) {
+                    setPoint = (setPoint <= 0 ? 0 : --setPoint);
+                    needRedraw = 1;
+                }
+                else if (e.key.keysym.sym == SDLK_LEFT) {
+                    processPower = (processPower <= 0 ? 0 : --processPower);
+                    needRedraw = 1;
+                }
+                else if (e.key.keysym.sym == SDLK_RIGHT) {
+                    processPower++;
+                    needRedraw = 1;
+                }
             }
         }
         if (needRedraw)
