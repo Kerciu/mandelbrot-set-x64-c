@@ -1,6 +1,4 @@
----
-
-# 🌀 Mandelbrot Set Visualisation
+# Mandelbrot Set Visualisation
 
 **Author:** Kacper Górski
 
@@ -31,7 +29,3 @@ This is a hybrid program created with x64 assembly and C language used for gener
     ```shell
     ./mandelbrot
     ```
-
-Enjoy exploring the fractal beauty of the Mandelbrot Set! 🌟
-
----
